@@ -1,11 +1,23 @@
 Package: casecrossover
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Approximate Bayesian Inference for Case Crossover Models
 Version: 0.1.0
-Author: Who wrote it
+Authors@R: person("Alex","Stringer",email = "alex.stringer@mail.utoronto.ca",role = c("cre","aut"))
 Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Description: Implementation of the methodology described in ...
+    This package fits case crossover models with linear or smooth terms
+    for covariate effects, using approximate Bayesian inference. Marginal
+    posterior summaries are returned by default, and functions are provided
+    for more advanced computations like global confidence envelopes and samples.
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
+Depends: R (>= 3.4.4)
+Imports:
+  ggplot2
+RoxygenNote: 6.1.1
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
+VignetteBuilder: knitr

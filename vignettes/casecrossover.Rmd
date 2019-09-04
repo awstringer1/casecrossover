@@ -1,0 +1,21 @@
+---
+title: "casecrossover"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{casecrossover}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(casecrossover)
+```
+
+Welcome to the vignette for the \texttt{casecrossover} package!

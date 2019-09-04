@@ -1,3 +1,7 @@
+<!-- badges: start -->
+[![Travis build status](https://travis-ci.org/awstringer1/casecrossover.svg?branch=master)](https://travis-ci.org/awstringer1/casecrossover)
+<!-- badges: end -->
+
 # casecrossover
 R package supporting case crossover models as described in ...
 

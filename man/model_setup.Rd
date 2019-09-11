@@ -4,7 +4,7 @@
 \alias{model_setup}
 \title{Set up a casecrossover model for fitting.}
 \usage{
-model_setup(formula, data)
+model_setup(formula, data, control = cc_control())
 }
 \arguments{
 \item{formula}{A standard R formula; see description.

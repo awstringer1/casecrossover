@@ -2,9 +2,6 @@ context("Model setup")
 library(casecrossover)
 library(dplyr) # For tests
 
-# Source utility functions
-devtools::load_all()
-
 test_that("Placeholder test",{
   expect_equal(1,1)
 })

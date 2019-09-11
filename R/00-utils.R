@@ -92,7 +92,7 @@ create_alist_element <- function(u,constraint = NULL) {
   # constraint: vector containing values of u for which random effect U should be
   # constrained to be zero.
   lu <- length(u)
-  A <- Diagonal(n = lu)[match(u,unique(u)),order(unique(u))]
+  A <- Matrix::Diagonal(n = lu)[match(u,unique(u)),order(unique(u))]
   model <- "rw2"
   constrzero <- NULL
   if (!is.null(constraint)) {

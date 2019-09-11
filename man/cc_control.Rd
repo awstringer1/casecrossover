@@ -7,19 +7,21 @@
 cc_control(...)
 }
 \arguments{
-\item{smooth_prior}{Specify the prior on the smooth terms in your model. This should
-be a named list with elements corresponding to each smooth term in the model. Each list
-element should further be a named list naming the prior and its parameters. For an
-explanation of available priors and their parameters, see the "priors" vignette.
-Note that the package will throw an error if priors aren't specified for smooth terms.
-There are no default priors.}
+\item{...}{Arguments used to override the defaults output by cc_control().}
 }
 \description{
 This function returns a list of control parameters
 suitable for input into case-crossover model setup and fitting functions.
 You can call it directly to see what parameters should be set and what their
 default values are. You can pass any of these parameters to the function
-directly to set their values.
+directly to set their values. Arguments include:
+
+smooth_prior: Specify the prior on the smooth terms in your model. This should
+be a named list with elements corresponding to each smooth term in the model. Each list
+element should further be a named list naming the prior and its parameters. For an
+explanation of available priors and their parameters, see the "priors" vignette.
+Note that the package will throw an error if priors aren't specified for smooth terms.
+There are no default priors.
 }
 \examples{
 cc_control(smooth_prior = list(z = list(prior = "pc_prec",parameters = c(u = 3,a = 1))))

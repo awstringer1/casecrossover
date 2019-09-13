@@ -40,3 +40,30 @@ test_that("Formula parsing works as expected",{
   expect_length(parse_formula(y ~ x + s(z) + strata(id)),PARSELENGTH)
 })
 
+test_that("Priors created as expected",{
+  expect_true(validate_prior_distribution(pc_prior(u = 3,alpha = .5))) # Test all the supported ones are valid... lol
+  expect_false(validate_prior_distribution(c(1,2,3)))
+  expect_false(validate_prior_distribution(list(name = "alexprior")))
+  expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(u = 1,a = 2))))
+  expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(alpha = 2))))
+})
+
+uu <- (1:10)[sample(1:10)]
+test_that("Linear constraints created as expected",{
+  expect_error(create_linear_constraints(uu,c(1,2,56,8)))
+  expect_equal(create_linear_constraints(uu,1)[[1]]$constraint,sparseVector(1,1,10))
+  expect_equal(create_linear_constraints(uu,c(1,2,3))[[1]]$constraint,sparseVector(1,1,10))
+  expect_equal(create_linear_constraints(uu,c(1,2,3))[[2]]$constraint,sparseVector(1,2,10))
+  expect_equal(create_linear_constraints(uu,c(1,2,3))[[3]]$constraint,sparseVector(1,3,10))
+  expect_true(validate_linear_constraints(create_linear_constraints(uu,1)))
+  expect_true(validate_linear_constraints(create_linear_constraints(uu,c(1,2,3))))
+  expect_false(validate_linear_constraints(c(1,2,3)))
+  expect_false(validate_linear_constraints(list(list(u = 1,constraint = c(1,2,3)))))
+  expect_false(validate_linear_constraints(list(u = 1,constraint = c(1,2,3))))
+  expect_false(validate_linear_constraints(list(constraint = c(1,2,3))))
+  expect_false(validate_linear_constraints(list(list(constraint = c(1,2,3)))))
+  expect_false(validate_linear_constraints(list(list(u = c(1,2,3,4,5),constraint = c(1,2,3)))))
+  expect_false(validate_linear_constraints(list(list(u = c(1,2,3),constraint = c(1,2,3)))))
+  expect_false(validate_linear_constraints(list(list(u = c(1,2,3,4,5),constraint = sparseVector(1,1,10)))))
+})
+

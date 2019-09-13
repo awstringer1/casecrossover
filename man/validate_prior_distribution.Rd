@@ -4,10 +4,10 @@
 \alias{validate_prior_distribution}
 \title{Validate a specified prior distribution.}
 \usage{
-validate_prior_distribution(control)
+validate_prior_distribution(prior)
 }
 \arguments{
-\item{control}{A control list as returned by cc_control().}
+\item{prior}{The smooth_prior element of a control list as returned by cc_control().}
 }
 \description{
 Pass in your control parameters, and this function will tell you whether you specified

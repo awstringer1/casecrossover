@@ -88,7 +88,7 @@ supported_prior_distributions <- function(nm = "") {
 #' You won't get a formal error if your prior is determined to be incorrectly specified; you'll get a
 #' message that tries to help you fix it.
 #'
-#' @param control A control list as returned by cc_control().
+#' @param prior The smooth_prior element of a control list as returned by cc_control().
 #'
 #' @examples
 #' mycontrol <- cc_control(smooth_prior = list(name = "pc.prec",params = c(u = 3,alpha = .5)))
@@ -100,17 +100,20 @@ supported_prior_distributions <- function(nm = "") {
 #' validate_prior_distribution(mycontrol_badprior)
 #'
 #' @export
-validate_prior_distribution <- function(control) {
-  # Silently return TRUE if no prior specified
-  if (length(control$smooth_prior) == 0) return(TRUE)
+validate_prior_distribution <- function(prior) {
+  # Check it's a list with the correct names
+  islistwithcorrectnames <- is.list(prior) & length(names(prior)) == 3 & "name" %in% names(prior) & "params" %in% names(prior) & "call" %in% names(prior)
+  if (!islistwithcorrectnames) {
+    print("The correct format for a prior is a named list with elements 'name', 'params', and 'call'.")
+    return(FALSE)
+  }
   PRIOR_VALID <- TRUE
   supportedpriors <- supported_prior_distributions()
-  prior <- control$smooth_prior
   # Check prior is supported
   if (prior$name %in% names(supportedpriors)) {
-    stringr::str_c("Prior ",prior$name," is supported!")
+    print(stringr::str_c("Prior ",prior$name," is supported!"))
   } else {
-    stringr::str_c("Prior ",prior$name," is not supported. Try running supported_prior_distributions() to see supported priors.")
+    print(stringr::str_c("Prior ",prior$name," is not supported. Try running supported_prior_distributions() to see supported priors."))
     return(FALSE)
   }
 
@@ -118,23 +121,135 @@ validate_prior_distribution <- function(control) {
   in_user_not_in_supported <- dplyr::setdiff(names(prior$params),supportedpriors[[prior$name]]$params)
   in_supported_not_in_user <- dplyr::setdiff(supportedpriors[[prior$name]]$params,names(prior$params))
   if (length(in_user_not_in_supported) != 0) {
-    stringr::str_c("The following parameters were specified by you but not supported: ",in_user_not_in_supported)
+    print(stringr::str_c("The following parameters were specified by you but not supported: ",in_user_not_in_supported))
     PRIOR_VALID <- FALSE
   }
   if (length(in_supported_not_in_user) != 0) {
-    stringr::str_c("The following parameters were not specified by you but are required: ",in_supported_not_in_user)
+    print(stringr::str_c("The following parameters were not specified by you but are required: ",in_supported_not_in_user))
     PRIOR_VALID <- FALSE
   }
 
   if (PRIOR_VALID) {
-    paste0("Your prior specification is valid!")
+    print(paste0("Your prior specification is valid!"))
     return(TRUE)
   }
 
-  paste("Your prior specification is not valid. See above messages for how to fix it.")
+  print(paste0("Your prior specification is not valid. See above messages for how to fix it."))
   return(FALSE)
 
 }
+
+#' The PC Prior for the smoothing log precision.
+#'
+#' @description The PC prior for the smoothing log precision is described in the package vignette.
+#' This is a convenience function for specifying this prior in the casecrossover software.
+#'
+#' The prior is specified as P(sigma > u) = 1 - alpha.
+#'
+#' @param u The "u" in P(sigma > u) = 1 - alpha.
+#' @param alpha The "alpha" in P(sigma > u) = 1 - alpha.
+#'
+#' @examples
+#' pc_prior(u = 3,alpha = .5)
+#'
+#' @export
+pc_prior <- function(u,alpha) {
+  list(
+    name = "pc.prec",
+    params = c(u = u,alpha = alpha),
+    call = supported_prior_distributions("pc.prec")$call
+  )
+}
+
+#' Create a linear combination vector for a single-element-zero constraint on a smooth term
+#'
+#' @description The most common and easiest to interpret constraint on a random walk model for
+#' a smooth term in a case-crossover model is simply to set a single element of the random effect
+#' to zero. This means that effects are interpreted as relative effects compared to this "reference" value.
+#' The reason this is the default constraint, as opposed to the usual "sum-to-zero" constraint used in
+#' random walk models, is because the main advantage of the "sum-to-zero" constraint is that it is
+#' orthogonal to the intercept in the model. In a case-crossover model, the intercept is not estimable,
+#' and while it's still totally possible to use a sum-to-zero constraint, it becomes less clear how
+#' to interpret it.
+#'
+#' The function returns a named list of sparseVectors suitable for input into cc_control(). Specifically, the list items
+#' are themselves lists, containing the sorted unique values of your covariate, and a sparseVector
+#' implementing the constraint.
+#'
+#' @param u Covariate vector. You can pass it in raw (like data$u) or as a sorted vector of unique values.
+#' @param whichzero Actual values of u for which you want the random effect to be zero.
+#'
+#' @examples
+#' temperature <- c(10,15,20,25,30,35,40)
+#' create_linear_constraints(temperature,30)
+#' create_linear_constraints(temperature,c(30,35))
+#'
+#' @export
+create_linear_constraints <- function(u,whichzero) {
+  u <- sort(unique(u))
+  if (!all(whichzero %in% u)) {
+    notfound <- stringr::str_c(whichzero[which(!(whichzero %in% u))],collapse = ", ")
+    stop(stringr::str_c("Value(s) ",notfound," not found in the covariate you supplied. Try rounding your data?"))
+  }
+
+  lu <- length(u)
+
+  purrr::map(whichzero,~list(u = u,constraint = sparseVector(x = 1,i = which(u == .x),length = lu)))
+}
+
+#' Validate your created linear constraints.
+#'
+#' @description This function checks the format of what you're inputting into cc_control() for
+#' linear constraints. This is to help you format your model correctly and prevent downstream
+#' errors, which can be harder to debug.
+#'
+#' @param constraints What you're planning on inputting to cc_control(linear_constraints = ...)
+#'
+#' @examples
+#' validate_linear_constraints(create_linear_constraints(u = c(1,2,3),whichzero = 1)) # Valid
+#' validate_linear_constraints(list(x = c(1,2,3))) # Not valid
+#'
+#' @export
+validate_linear_constraints <- function(constraints) {
+  VALID_CONSTRAINT <- TRUE
+  # Check if input is a list
+  if (!is.list(constraints)) {
+    print(stringr::str_c("Expected a list but you provided an object of class ",class(constraints),
+                        ". Even if you have only one constraint, pass a list of sparseVectors."))
+  return(FALSE)
+  }
+
+  # Check if the elements of the list each contain the correct items
+  itemcheck <- constraints %>% purrr::map_lgl(~length(.x) == 2 & "u" %in% names(.x) & "constraint" %in% names(.x))
+  if (any(!itemcheck)) {
+    print("The correct format for linear constraints is a list of lists, each sub-list containing exactly elements u and constraint.")
+    return(FALSE)
+  }
+
+  # Check if all constraint vectors in the list are sparseVectors
+  classcheck <- constraints %>%
+    purrr::map("constraint") %>%
+    purrr::map_lgl(~inherits(.x,"sparseVector"))
+
+  if (any(!classcheck)) {
+    print("One or more vectors from the list you provided does not inherit from class sparseVector. Check your vectors!")
+    return(FALSE)
+  }
+
+  # Check if each vector is the same length as the covariate
+  lengthcheck <- constraints %>%
+    purrr::map_lgl(~length(.x$u) == length(.x$constraint))
+
+  if (any(!lengthcheck)) {
+    print("One or more of your constraints isn't the same length as the covariate")
+    return(FALSE)
+  }
+
+  print("Your linear constraint appears valid!")
+  return(TRUE)
+}
+
+
 
 #' Set up a casecrossover model for fitting.
 #'
@@ -165,7 +280,7 @@ validate_prior_distribution <- function(control) {
 #' model_setup(y~x + strata(id),data.frame(y = c(0,1),x = c(1,2),id = c(1,1)))
 #'
 #' @export
-# model_setup <- function(formula,data,control = cc_control()) {}
+# model_setup <- function(formula,data,control = cc_control(smooth_prior = pc_prior(3,.5))) {}
 model_setup <- function(formula,data,control = cc_control()) {
   # TODO: implement this.
   # TODO: document this.
@@ -253,12 +368,17 @@ model_setup <- function(formula,data,control = cc_control()) {
   # Prior u is P(sigma > u) = alpha.
   #
   # First, validate the user's prior is correctly specified
-  priorvalid <- validate_prior_distribution(control)
-  if (!priorvalid) stop("Please specify a valid prior for your smooth terms.")
-  # If it's valid, grab the actual function call and set the parameters
-  model_data$theta_logprior <- function(theta) {
-    callargs <- as.list(c(theta = theta,control$smooth_prior$params))
-    do.call(supported_prior_distributions(control$smooth_prior$name)$call,callargs)
+  priorvalid <- TRUE
+  if (model_data$M > 0) {
+    validate_prior_distribution(control$smooth_prior)
+    if (!priorvalid) stop("Please specify a valid prior for your smooth terms.")
+    # If it's valid, grab the actual function call and set the parameters
+    model_data$theta_logprior <- function(theta) {
+      callargs <- as.list(c(theta = theta,control$smooth_prior$params))
+      do.call(supported_prior_distributions(control$smooth_prior$name)$call,callargs)
+    }
+  } else {
+    model_data$theta_logprior <- function() {return(0)} # Placeholder
   }
 
   # log(precision) for prior on beta. Specified in control
@@ -289,4 +409,10 @@ model_setup <- function(formula,data,control = cc_control()) {
   # TODO: linear constraints. The first one should be taken out explicitly then put back
   # in. The others are corrected after. This behaviour does not need to be exposed to the user.
   # model_data$vectorofcolumnstoremove <- round(RW2BINS/2)
+
+  # Check for linear constraints. Validate and then add them to the model data.
+  # If there are linear constraints, take the first one for each variable and create the
+  # model_data$vectorofcolumnstoremove element.
+
+
 }

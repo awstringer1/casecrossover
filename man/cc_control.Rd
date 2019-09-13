@@ -22,8 +22,15 @@ element should further be a named list naming the prior and its parameters. For 
 explanation of available priors and their parameters, see the "priors" vignette.
 Note that the package will throw an error if priors aren't specified for smooth terms.
 There are no default priors.
+
+linear_constraints: Specify linear constraints on your smooth model. You should
+input a named list of vectors. The name of the list is the name of the covariate that you
+want the constraint on. The length of the vector should be equal to the number of unique
+values of this covariate. The vector should satisfy a^T u = 0, where a is the vector and
+u is a SORTED (ascending) vector of unique covariate values. For help creating this list,
+see create_linear_combinations().
 }
 \examples{
-cc_control(smooth_prior = list(z = list(prior = "pc_prec",parameters = c(u = 3,a = 1))))
+cc_control(smooth_prior = list(z = list(prior = "pc_prec",params = c(u = 3,a = 1))))
 
 }

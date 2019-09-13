@@ -49,6 +49,10 @@ parse_formula <- function(ff) {
                 stringr::str_c(strata,collapse=", ")))
   }
 
+  # Finally, remove the intercept. If a -1 was already in the formula, this operation does nothing,
+  # so it's safe.
+  ff <- update(ff,.~.-1)
+
   # Return a named list of vectors with the names of each type of term
   list(
     linear = attributes(terms(ff))$term.labels,
@@ -67,6 +71,8 @@ parse_formula(ff)
 cc_default_control <- function() {
   list(
     smooth_prior = list(),
+    linear_constraints = list(),
+    beta_prior_logprec = log(1/10),
     opt_control = list(
       prec = 1e-06,
       stop.trust.radius = 1e-03,
@@ -102,3 +108,36 @@ create_alist_element <- function(u,constraint = NULL) {
 
   list(u = u,A = A,model = model,constrzero = constrzero)
 }
+
+# INTERNAL: Functions to create the differencing matrix
+# First create a differencing matrix of supplied dimension
+create_single_diff_matrix <- function(d) {
+  # d: ROW dimension. Result will be d x (d+1). d is the number of control days in our application
+  cbind(Matrix::Diagonal(d,-1),Matrix::Matrix(1,d,1))
+}
+# Now create a function to create the whole big differencing matrix, given a vector of
+# number of control days
+create_diff_matrix <- function(control_days) {
+  purrr::map(control_days,create_single_diff_matrix) %>% bdiag()
+}
+
+# dd <- create_diff_matrix(model_data$control_days) # dim = 6,835; size = 220 kB
+
+# Now the inverse of the diff mat transpose crossproduct (dtcp)
+# Function to create a single diffmat inverse
+create_single_dtcp_inverse <- function(d) {
+  Diagonal(d,1) - Matrix(1/(d+1),d,d)
+}
+# Function to create the whole block diagonal thing
+# Will be slow because of bdiag(), but only have to do it once
+create_full_dtcp_matrix <- function(control_days) {
+  purrr::map(control_days,create_single_dtcp_inverse) %>% bdiag()
+}
+
+
+
+# INTERNAL: list of priors and their calls.
+# The actual functions are defined in 00-prior-distributions.R
+prior_calls <- list(
+  pc.prec = pcprec
+)

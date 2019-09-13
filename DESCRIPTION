@@ -22,7 +22,8 @@ Imports:
   stats,
   utils,
   Matrix,
-  stringr
+  stringr,
+  purrr
 RoxygenNote: 6.1.1
 Suggests: 
     knitr,

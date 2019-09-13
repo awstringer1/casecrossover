@@ -14,6 +14,9 @@ sampledata <- tibble(
   x = c(1,2,3,1,2)
 )
 
+ff1 <- case1 ~ x + strata(id)
+control1 <- cc_control(smooth_prior = list(name = "pc.prec",params = c(u = 3,alpha = .75)))
+
 # model_data1 <- model_setup(case1 ~ x + strata(id),sampledata)
 # model_data2 <- model_setup(case2 ~ x + strata(id),sampledata)
 

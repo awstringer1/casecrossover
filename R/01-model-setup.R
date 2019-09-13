@@ -31,16 +31,22 @@
 #' Note that the package will throw an error if priors aren't specified for smooth terms.
 #' There are no default priors.
 #'
+#' linear_constraints: Specify linear constraints on your smooth model. You should
+#' input a named list of vectors. The name of the list is the name of the covariate that you
+#' want the constraint on. The length of the vector should be equal to the number of unique
+#' values of this covariate. The vector should satisfy a^T u = 0, where a is the vector and
+#' u is a SORTED (ascending) vector of unique covariate values. For help creating this list,
+#' see create_linear_combinations().
+#'
 #' @param ... Arguments used to override the defaults output by cc_control().
-
 #'
 #' @examples
-#' cc_control(smooth_prior = list(z = list(prior = "pc_prec",parameters = c(u = 3,a = 1))))
+#' cc_control(smooth_prior = list(z = list(prior = "pc_prec",params = c(u = 3,a = 1))))
 #'
 #' @importFrom rlang .data
 #' @importFrom magrittr %>%
-#' @import stats
-#' @import utils
+#' @importFrom stats formula terms
+#' @import Matrix
 #' @export
 cc_control <- function(...) {
   outargs <- cc_default_control()
@@ -49,6 +55,85 @@ cc_control <- function(...) {
     outargs[[nm]] <- list(...)[[nm]]
   }
   outargs
+}
+
+#' Supported prior distributions.
+#'
+#' @description This function returns a list of all supported prior distributions,
+#' including their names, parameters, and actual function call.
+#'
+#' @param nm Optional; if you know the name of the
+#' @examples
+#' supported_prior_distributions()
+#' supported_prior_distributions("pc.prec")
+#'
+#' @export
+supported_prior_distributions <- function(nm = "") {
+  supported_priors <- list(
+    pc.prec = list(
+      name = "pc.prec",
+      params = c("u","alpha"),
+      call = prior_calls[["pc.prec"]]
+    )
+  )
+
+  if (nm != "") return(supported_priors[[nm]])
+  supported_priors
+}
+
+#' Validate a specified prior distribution.
+#'
+#' @description Pass in your control parameters, and this function will tell you whether you specified
+#' your priors correctly. It just checks supported_prior_distributions() for you; so also, see that function.
+#' You won't get a formal error if your prior is determined to be incorrectly specified; you'll get a
+#' message that tries to help you fix it.
+#'
+#' @param control A control list as returned by cc_control().
+#'
+#' @examples
+#' mycontrol <- cc_control(smooth_prior = list(name = "pc.prec",params = c(u = 3,alpha = .5)))
+#' mycontrol_missinginfo <- cc_control(smooth_prior = list(name = "pc.prec"))
+#' mycontrol_badprior <- cc_control(smooth_prior = list(name = "foo"))
+#'
+#' validate_prior_distribution(mycontrol)
+#' validate_prior_distribution(mycontrol_missinginfo)
+#' validate_prior_distribution(mycontrol_badprior)
+#'
+#' @export
+validate_prior_distribution <- function(control) {
+  # Silently return TRUE if no prior specified
+  if (length(control$smooth_prior) == 0) return(TRUE)
+  PRIOR_VALID <- TRUE
+  supportedpriors <- supported_prior_distributions()
+  prior <- control$smooth_prior
+  # Check prior is supported
+  if (prior$name %in% names(supportedpriors)) {
+    stringr::str_c("Prior ",prior$name," is supported!")
+  } else {
+    stringr::str_c("Prior ",prior$name," is not supported. Try running supported_prior_distributions() to see supported priors.")
+    return(FALSE)
+  }
+
+  # Check parameters specified correctly
+  in_user_not_in_supported <- dplyr::setdiff(names(prior$params),supportedpriors[[prior$name]]$params)
+  in_supported_not_in_user <- dplyr::setdiff(supportedpriors[[prior$name]]$params,names(prior$params))
+  if (length(in_user_not_in_supported) != 0) {
+    stringr::str_c("The following parameters were specified by you but not supported: ",in_user_not_in_supported)
+    PRIOR_VALID <- FALSE
+  }
+  if (length(in_supported_not_in_user) != 0) {
+    stringr::str_c("The following parameters were not specified by you but are required: ",in_supported_not_in_user)
+    PRIOR_VALID <- FALSE
+  }
+
+  if (PRIOR_VALID) {
+    paste0("Your prior specification is valid!")
+    return(TRUE)
+  }
+
+  paste("Your prior specification is not valid. See above messages for how to fix it.")
+  return(FALSE)
+
 }
 
 #' Set up a casecrossover model for fitting.
@@ -75,87 +160,133 @@ cc_control <- function(...) {
 #' @param data A data.frame or tibble containing at minimum one column which groups
 #' subjects together, one column indicating the case day, and one or more columns
 #' containing covariates.
+#' @param control A list containing control parameters. See cc_control().
 #' @examples
-#' model_setup(y~x,data.frame(y = c(0,1),x = c(1,2)))
+#' model_setup(y~x + strata(id),data.frame(y = c(0,1),x = c(1,2),id = c(1,1)))
 #'
 #' @export
-# model_setup <- function(formula,data,control = cc_control()) {
-#   # TODO: implement this.
-#   # TODO: document this.
-#   model_data <- structure(list(), class = "ccmodeldata")
-#
-#   # Parse the formula
-#   model_elements <- parse_formula(formula)
-#   # Check that the smooth and strata terms exist in the data
-#   # The linear terms will be passed to model.matrix, which has its own
-#   # error checking.
-#   extra_model_vars <- model_elements[c("smooth","strata")] %>% purrr::reduce(c)
-#   if (!all(extra_model_vars %in% colnames(data))) {
-#     missing_vars <- extra_model_vars[!(extra_model_vars %in% colnames(data))]
-#     stop(paste0("The following variables were provided in the model formula but not in the data: ",
-#                 stringr::str_c(missing_vars,collapse = ", ")))
-#   }
-#
-#   # Create the smooth terms- design matrix
-#   Alist <- list()
-#   if (length(model_elements$smooth) > 0) {
-#     for (nm in names(model_elements$smooth)) {
-#       Alist[[nm]] <- create_alist_element(data[[nm]])
-#     }
-#   }
-#   model_data$A <- Alist
-#   model_data$M <- Alist %>% purrr::map("A") %>% purrr::map(ncol) %>% purrr::reduce(sum)
-#   # TODO: when implementing the linear constraint part, where one element of the
-#   # precision matrix is set to 0, make sure to make the appropriate reduction in M
-#
-#   # Number of subjects
-#   n <- length(unique(data[model_elements$strata]))
-#
-#   # Linear terms
-#   model_data$X <- Matrix::sparse.model.matrix(model_elements$linear_formula,data = data)
-#   model_data$p <- ncol(model_data$X)
-#
-#   # Create the vector of control days
-#   # A named vector where the names are the subject ids and the values are the number
-#   # of control days that each has in the data
-#
-#   control_days <- data %>%
-#     filter(.data[[model_elements$response]] == 0) %>%
-#     group_by(stratum) %>%
-#     summarize(control_days = n())
-#
-#   model_data$control_days <- control_days
-#   names(model_data$control_days) <- sim1data$subject %>% unique() %>% sort()
-#   model_data$Nd <- sum(model_data$control_days)
-#   model_data$Ne <- model_data$Nd + model_data$n
-#   model_data$Wd <- model_data$M + model_data$p + model_data$Nd
-#   model_data$Wdf <- model_data$M + model_data$p + model_data$Ne
-#   # Priors. Prior u is P(sigma > u) = alpha. It's the prior median if alpha = .5
-#   # So set u = log(1.25), 50% chance that a unit increase in exposure yields a
-#   # 25% increase in risk.
-#   model_data$theta_logprior <- function(theta,prior_alpha = .75,prior_u = log(20)) {
-#     # In this model, theta is the LOG PRECISION of the rw2 smoothing variance
-#     # Implement the PC prior directly.
-#     # P(sigma > u) = alpha.
-#     # See inla.doc("pc.prec")
-#     lambda <- -log(prior_alpha)/prior_u
-#     log(lambda/2) - lambda * exp(-theta/2) - theta/2
-#   }
-#
-#   # log(precision) for prior on beta
-#   model_data$beta_logprec <- log(.05)
-#
-#
-#   # Differenced matrices...
-#   model_data$diffmat <- create_diff_matrix(model_data$control_days)
-#   model_data$lambdainv <- create_full_dtcp_matrix(model_data$control_days)
-#   model_data$A$exposure$Ad <- model_data$diffmat %*% model_data$A$exposure$A
-#   model_data$Xd <- model_data$diffmat %*% model_data$X
-#   # Random effect model specification data
-#   model_data$modelspec <- model_data$A %>%
-#     purrr::map("model") %>%
-#     purrr::map2(.,names(.),~tibble(covariate = .y,model = .x)) %>%
-#     purrr::reduce(bind_rows)
-#
-#   model_data$vectorofcolumnstoremove <- round(RW2BINS/2)
-# }
+# model_setup <- function(formula,data,control = cc_control()) {}
+model_setup <- function(formula,data,control = cc_control()) {
+  # TODO: implement this.
+  # TODO: document this.
+  model_data <- structure(list(), class = "ccmodeldata")
+
+  # Parse the formula
+  model_elements <- parse_formula(formula)
+  # Check that the smooth and strata terms exist in the data
+  # The linear terms will be passed to model.matrix, which has its own
+  # error checking.
+  extra_model_vars <- model_elements[c("smooth","strata")] %>% purrr::reduce(c)
+  if (!all(extra_model_vars %in% colnames(data))) {
+    missing_vars <- extra_model_vars[!(extra_model_vars %in% colnames(data))]
+    stop(paste0("The following variables were provided in the model formula but not in the data: ",
+                stringr::str_c(missing_vars,collapse = ", ")))
+  }
+
+  # Create the smooth terms- design matrix
+  Alist <- list()
+  if (length(model_elements$smooth) > 0) {
+    for (nm in names(model_elements$smooth)) {
+      Alist[[nm]] <- create_alist_element(data[[nm]])
+    }
+  }
+  model_data$A <- Alist
+  if (length(Alist) == 0) {
+    model_data$A <- NULL
+    model_data$M <- 0 # No smooth terms
+  } else {
+    model_data$M <- Alist %>% purrr::map("A") %>% purrr::map(ncol) %>% purrr::reduce(sum)
+  }
+  # TODO: when implementing the linear constraint part, where one element of the
+  # precision matrix is set to 0, make sure to make the appropriate reduction in M
+
+  # Number of subjects
+  n <- length(unique(data[model_elements$strata]))
+
+  # Linear terms
+  if (length(model_elements$linear) == 0) {
+    model_data$X <- NULL
+    model_data$p <- 0 # No linear terms
+  } else {
+    model_data$X <- Matrix::sparse.model.matrix(model_elements$linear_formula,data = data)
+    model_data$p <- ncol(model_data$X)
+  }
+  # Safety check: ncol(X) > 0.
+  if (ncol(model_data$X) == 0) {
+    model_data$X <- NULL
+    model_data$p <- 0 # No linear terms
+  }
+
+
+  # Create the vector of control days
+  # A named vector where the names are the subject ids and the values are the number
+  # of control days that each has in the data
+
+  control_days <- data %>%
+    dplyr::arrange(.data[[model_elements$strata]],.data[[model_elements$response]]) %>%
+    dplyr::filter(.data[[model_elements$response]] == 0) %>%
+    dplyr::group_by(.data[[model_elements$strata]]) %>%
+    dplyr::summarize(control_days = n())
+
+  # Create the vector of case days
+  # A named vector where the names are the subject ids and the values are the number
+  # of control days that each has in the data
+
+  case_days <- data %>%
+    dplyr::arrange(.data[[model_elements$strata]],.data[[model_elements$response]]) %>%
+    dplyr::filter(.data[[model_elements$response]] != 0) %>%
+    dplyr::group_by(.data[[model_elements$strata]]) %>%
+    dplyr::summarize(case_days = n())
+
+
+  model_data$control_days <- control_days$control_days
+  model_data$case_days <- case_days$case_days
+  names(model_data$control_days) <- data[[model_elements$strata]] %>% unique() %>% sort()
+  names(model_data$case_days) <- data[[model_elements$strata]] %>% unique() %>% sort()
+  model_data$Nd <- sum(model_data$control_days)
+  model_data$Ne <- model_data$Nd + model_data$n
+  model_data$Wd <- model_data$M + model_data$p + model_data$Nd
+  model_data$Wdf <- model_data$M + model_data$p + model_data$Ne
+
+  # Priors.
+  # Currently only pc prec prior is implemented.
+  # Prior u is P(sigma > u) = alpha.
+  #
+  # First, validate the user's prior is correctly specified
+  priorvalid <- validate_prior_distribution(control)
+  if (!priorvalid) stop("Please specify a valid prior for your smooth terms.")
+  # If it's valid, grab the actual function call and set the parameters
+  model_data$theta_logprior <- function(theta) {
+    callargs <- as.list(c(theta = theta,control$smooth_prior$params))
+    do.call(supported_prior_distributions(control$smooth_prior$name)$call,callargs)
+  }
+
+  # log(precision) for prior on beta. Specified in control
+  model_data$beta_logprec <- control$beta_prior_logprec
+
+
+  # Differenced matrices:
+  model_data$diffmat <- create_diff_matrix(model_data$control_days)
+  model_data$lambdainv <- create_full_dtcp_matrix(model_data$control_days)
+  if (model_data$M > 0) {
+    for (nm in names(model_data$A)) {
+      model_data$A[[nm]]$Ad <- model_data$diffmat %*% model_data$A[[nm]]$A
+    }
+  }
+  if (model_data$p > 0) {
+    model_data$Xd <- model_data$diffmat %*% model_data$X
+  }
+
+  # Random effect model specification data
+  # model_data$modelspec <- NULL
+  # if (model_data$M > 0) {
+  #   model_data$modelspec <- model_data$A %>%
+  #     purrr::map("model") %>%
+  #     purrr::map2(.,names(.),~tibble(covariate = .y,model = .x)) %>%
+  #     purrr::reduce(dplyr::bind_rows)
+  # }
+
+  # TODO: linear constraints. The first one should be taken out explicitly then put back
+  # in. The others are corrected after. This behaviour does not need to be exposed to the user.
+  # model_data$vectorofcolumnstoremove <- round(RW2BINS/2)
+}

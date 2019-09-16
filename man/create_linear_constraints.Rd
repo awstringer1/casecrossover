@@ -4,12 +4,14 @@
 \alias{create_linear_constraints}
 \title{Create a linear combination vector for a single-element-zero constraint on a smooth term}
 \usage{
-create_linear_constraints(u, whichzero)
+create_linear_constraints(u, whichzero, nm = "")
 }
 \arguments{
 \item{u}{Covariate vector. You can pass it in raw (like data$u) or as a sorted vector of unique values.}
 
 \item{whichzero}{Actual values of u for which you want the random effect to be zero.}
+
+\item{nm}{The name of the covariate in your dataframe.}
 }
 \description{
 The most common and easiest to interpret constraint on a random walk model for
@@ -22,12 +24,12 @@ and while it's still totally possible to use a sum-to-zero constraint, it become
 to interpret it.
 
 The function returns a named list of sparseVectors suitable for input into cc_control(). Specifically, the list items
-are themselves lists, containing the sorted unique values of your covariate, and a sparseVector
-implementing the constraint.
+containå the sorted unique values of your covariate, the index of the zero value(s), the name of the variable,
+and a list of sparseVector(s) implementing the constraint(s).
 }
 \examples{
 temperature <- c(10,15,20,25,30,35,40)
-create_linear_constraints(temperature,30)
-create_linear_constraints(temperature,c(30,35))
+create_linear_constraints(temperature,30,"temperature")
+create_linear_constraints(temperature,c(30,35),"temperature")
 
 }

@@ -4,10 +4,12 @@
 \alias{validate_linear_constraints}
 \title{Validate your created linear constraints.}
 \usage{
-validate_linear_constraints(constraints)
+validate_linear_constraints(constraints, verbose = TRUE)
 }
 \arguments{
 \item{constraints}{What you're planning on inputting to cc_control(linear_constraints = ...)}
+
+\item{verbose}{Logical. Should debugging information be printed?}
 }
 \description{
 This function checks the format of what you're inputting into cc_control() for

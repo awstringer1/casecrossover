@@ -4,7 +4,7 @@
 \alias{model_setup}
 \title{Set up a casecrossover model for fitting.}
 \usage{
-model_setup(formula, data, control = cc_control())
+model_setup(formula, data, control = cc_control(), verbose = FALSE)
 }
 \arguments{
 \item{formula}{A standard R formula; see description.
@@ -16,6 +16,9 @@ subjects together, one column indicating the case day, and one or more columns
 containing covariates.}
 
 \item{control}{A list containing control parameters. See cc_control().}
+
+\item{verbose}{Logical. Print progress and diagnostic information? Useful for debugging or
+keeping up with what the function is doing.}
 }
 \description{
 Set up a casecrossover model for fitting: creates all internal objects and stores them in a list with class "cc_model_data".

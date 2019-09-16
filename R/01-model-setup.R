@@ -89,6 +89,8 @@ supported_prior_distributions <- function(nm = "") {
 #' message that tries to help you fix it.
 #'
 #' @param prior The smooth_prior element of a control list as returned by cc_control().
+#' @param verbose Logical. Should the function actually print error messages? TRUE by default; turned
+#' off when used programatically (inside other functions).
 #'
 #' @examples
 #' mycontrol <- cc_control(smooth_prior = list(name = "pc.prec",params = c(u = 3,alpha = .5)))
@@ -100,20 +102,24 @@ supported_prior_distributions <- function(nm = "") {
 #' validate_prior_distribution(mycontrol_badprior)
 #'
 #' @export
-validate_prior_distribution <- function(prior) {
+validate_prior_distribution <- function(prior,verbose = TRUE) {
   # Check it's a list with the correct names
-  islistwithcorrectnames <- is.list(prior) & length(names(prior)) == 3 & "name" %in% names(prior) & "params" %in% names(prior) & "call" %in% names(prior)
+  islistwithcorrectnames <- is.list(prior) &
+    length(names(prior)) == 3 &
+    "name" %in% names(prior) &
+    "params" %in% names(prior) &
+    "call" %in% names(prior)
   if (!islistwithcorrectnames) {
-    print("The correct format for a prior is a named list with elements 'name', 'params', and 'call'.")
+    if (verbose) print("The correct format for a prior is a named list with elements 'name', 'params', and 'call'.")
     return(FALSE)
   }
   PRIOR_VALID <- TRUE
   supportedpriors <- supported_prior_distributions()
   # Check prior is supported
   if (prior$name %in% names(supportedpriors)) {
-    print(stringr::str_c("Prior ",prior$name," is supported!"))
+    if (verbose) print(stringr::str_c("Prior ",prior$name," is supported!"))
   } else {
-    print(stringr::str_c("Prior ",prior$name," is not supported. Try running supported_prior_distributions() to see supported priors."))
+    if (verbose) print(stringr::str_c("Prior ",prior$name," is not supported. Try running supported_prior_distributions() to see supported priors."))
     return(FALSE)
   }
 
@@ -121,16 +127,16 @@ validate_prior_distribution <- function(prior) {
   in_user_not_in_supported <- dplyr::setdiff(names(prior$params),supportedpriors[[prior$name]]$params)
   in_supported_not_in_user <- dplyr::setdiff(supportedpriors[[prior$name]]$params,names(prior$params))
   if (length(in_user_not_in_supported) != 0) {
-    print(stringr::str_c("The following parameters were specified by you but not supported: ",in_user_not_in_supported))
+    if (verbose) print(stringr::str_c("The following parameters were specified by you but not supported: ",in_user_not_in_supported))
     PRIOR_VALID <- FALSE
   }
   if (length(in_supported_not_in_user) != 0) {
-    print(stringr::str_c("The following parameters were not specified by you but are required: ",in_supported_not_in_user))
+    if (verbose) print(stringr::str_c("The following parameters were not specified by you but are required: ",in_supported_not_in_user))
     PRIOR_VALID <- FALSE
   }
 
   if (PRIOR_VALID) {
-    print(paste0("Your prior specification is valid!"))
+    if (verbose) print(paste0("Your prior specification is valid!"))
     return(TRUE)
   }
 
@@ -173,19 +179,20 @@ pc_prior <- function(u,alpha) {
 #' to interpret it.
 #'
 #' The function returns a named list of sparseVectors suitable for input into cc_control(). Specifically, the list items
-#' are themselves lists, containing the sorted unique values of your covariate, and a sparseVector
-#' implementing the constraint.
+#' containå the sorted unique values of your covariate, the index of the zero value(s), the name of the variable,
+#' and a list of sparseVector(s) implementing the constraint(s).
 #'
 #' @param u Covariate vector. You can pass it in raw (like data$u) or as a sorted vector of unique values.
 #' @param whichzero Actual values of u for which you want the random effect to be zero.
+#' @param nm The name of the covariate in your dataframe.
 #'
 #' @examples
 #' temperature <- c(10,15,20,25,30,35,40)
-#' create_linear_constraints(temperature,30)
-#' create_linear_constraints(temperature,c(30,35))
+#' create_linear_constraints(temperature,30,"temperature")
+#' create_linear_constraints(temperature,c(30,35),"temperature")
 #'
 #' @export
-create_linear_constraints <- function(u,whichzero) {
+create_linear_constraints <- function(u,whichzero,nm = "") {
   u <- sort(unique(u))
   if (!all(whichzero %in% u)) {
     notfound <- stringr::str_c(whichzero[which(!(whichzero %in% u))],collapse = ", ")
@@ -194,7 +201,13 @@ create_linear_constraints <- function(u,whichzero) {
 
   lu <- length(u)
 
-  purrr::map(whichzero,~list(u = u,constraint = sparseVector(x = 1,i = which(u == .x),length = lu)))
+  out <- list(list(
+    u = u,
+    whichzero = whichzero,
+    constraint = purrr::map(whichzero,~sparseVector(x = 1,i = which(u == .x),length = lu))
+  ))
+  names(out) <- nm
+  out
 }
 
 #' Validate your created linear constraints.
@@ -204,48 +217,65 @@ create_linear_constraints <- function(u,whichzero) {
 #' errors, which can be harder to debug.
 #'
 #' @param constraints What you're planning on inputting to cc_control(linear_constraints = ...)
+#' @param verbose Logical. Should debugging information be printed?
 #'
 #' @examples
 #' validate_linear_constraints(create_linear_constraints(u = c(1,2,3),whichzero = 1)) # Valid
 #' validate_linear_constraints(list(x = c(1,2,3))) # Not valid
 #'
 #' @export
-validate_linear_constraints <- function(constraints) {
+validate_linear_constraints <- function(constraints,verbose = TRUE) {
   VALID_CONSTRAINT <- TRUE
   # Check if input is a list
   if (!is.list(constraints)) {
-    print(stringr::str_c("Expected a list but you provided an object of class ",class(constraints),
-                        ". Even if you have only one constraint, pass a list of sparseVectors."))
+    if (verbose) print(stringr::str_c("Expected a list but you provided an object of class ",class(constraints),
+                        ". Even if you have only one constraint, pass a list of constraints."))
   return(FALSE)
+  }
+  # If the input is only a single linear constraint, remind the user to use a named list.
+  if (length(constraints) == 3 &
+      "u" %in% names(constraints) &
+      "constraint" %in% names(constraints) &
+      "whichzero" %in% names(constraints)) {
+    if (verbose) print("It appears you input only a single linear constraint object, not in a list. Remember to wrap your linear constraint in a named list")
+    VALID_CONSTRAINT <- FALSE
   }
 
   # Check if the elements of the list each contain the correct items
-  itemcheck <- constraints %>% purrr::map_lgl(~length(.x) == 2 & "u" %in% names(.x) & "constraint" %in% names(.x))
+  itemcheck <- constraints %>% purrr::map_lgl(~length(.x) == 3 &
+                                                "u" %in% names(.x) &
+                                                "constraint" %in% names(.x) &
+                                                "whichzero" %in% names(.x))
   if (any(!itemcheck)) {
-    print("The correct format for linear constraints is a list of lists, each sub-list containing exactly elements u and constraint.")
+    if (verbose) print("The correct format for linear constraints is a list containing exactly elements 'u', 'whichzero', and 'constraint'.")
     return(FALSE)
   }
 
   # Check if all constraint vectors in the list are sparseVectors
   classcheck <- constraints %>%
     purrr::map("constraint") %>%
+    purrr::map(1) %>%
     purrr::map_lgl(~inherits(.x,"sparseVector"))
 
   if (any(!classcheck)) {
-    print("One or more vectors from the list you provided does not inherit from class sparseVector. Check your vectors!")
+    if (verbose) print("One or more vectors from the list you provided does not inherit from class sparseVector. Check your vectors!")
     return(FALSE)
   }
 
   # Check if each vector is the same length as the covariate
-  lengthcheck <- constraints %>%
-    purrr::map_lgl(~length(.x$u) == length(.x$constraint))
+  lengthtester <- function(cnst) {
+    lu <- length(cnst$u)
+    cnstrlengths <- cnst$constraint %>% purrr::map_dbl(~length(.x))
+    all(lu == cnstrlengths)
+  }
+  lengthcheck <- constraints %>% purrr::map_lgl(lengthtester)
 
   if (any(!lengthcheck)) {
-    print("One or more of your constraints isn't the same length as the covariate")
+    if (verbose) print("One or more of your constraints isn't the same length as the covariate")
     return(FALSE)
   }
 
-  print("Your linear constraint appears valid!")
+  if (verbose) print("Your linear constraint appears valid!")
   return(TRUE)
 }
 
@@ -276,12 +306,15 @@ validate_linear_constraints <- function(constraints) {
 #' subjects together, one column indicating the case day, and one or more columns
 #' containing covariates.
 #' @param control A list containing control parameters. See cc_control().
+#' @param verbose Logical. Print progress and diagnostic information? Useful for debugging or
+#' keeping up with what the function is doing.
+#'
 #' @examples
 #' model_setup(y~x + strata(id),data.frame(y = c(0,1),x = c(1,2),id = c(1,1)))
 #'
 #' @export
 # model_setup <- function(formula,data,control = cc_control(smooth_prior = pc_prior(3,.5))) {}
-model_setup <- function(formula,data,control = cc_control()) {
+model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
   # TODO: implement this.
   # TODO: document this.
   model_data <- structure(list(), class = "ccmodeldata")
@@ -301,7 +334,7 @@ model_setup <- function(formula,data,control = cc_control()) {
   # Create the smooth terms- design matrix
   Alist <- list()
   if (length(model_elements$smooth) > 0) {
-    for (nm in names(model_elements$smooth)) {
+    for (nm in model_elements$smooth) {
       Alist[[nm]] <- create_alist_element(data[[nm]])
     }
   }
@@ -325,11 +358,11 @@ model_setup <- function(formula,data,control = cc_control()) {
   } else {
     model_data$X <- Matrix::sparse.model.matrix(model_elements$linear_formula,data = data)
     model_data$p <- ncol(model_data$X)
-  }
-  # Safety check: ncol(X) > 0.
-  if (ncol(model_data$X) == 0) {
-    model_data$X <- NULL
-    model_data$p <- 0 # No linear terms
+    # Safety check: ncol(X) > 0.
+    if (ncol(model_data$X) == 0) {
+      model_data$X <- NULL
+      model_data$p <- 0 # No linear terms
+    }
   }
 
 
@@ -350,14 +383,14 @@ model_setup <- function(formula,data,control = cc_control()) {
   case_days <- data %>%
     dplyr::arrange(.data[[model_elements$strata]],.data[[model_elements$response]]) %>%
     dplyr::filter(.data[[model_elements$response]] != 0) %>%
-    dplyr::group_by(.data[[model_elements$strata]]) %>%
-    dplyr::summarize(case_days = n())
+    dplyr::rename(case_days = .data[[model_elements$response]])
 
 
   model_data$control_days <- control_days$control_days
   model_data$case_days <- case_days$case_days
   names(model_data$control_days) <- data[[model_elements$strata]] %>% unique() %>% sort()
   names(model_data$case_days) <- data[[model_elements$strata]] %>% unique() %>% sort()
+  model_data$n <- length(model_data$case_days)
   model_data$Nd <- sum(model_data$control_days)
   model_data$Ne <- model_data$Nd + model_data$n
   model_data$Wd <- model_data$M + model_data$p + model_data$Nd
@@ -370,7 +403,7 @@ model_setup <- function(formula,data,control = cc_control()) {
   # First, validate the user's prior is correctly specified
   priorvalid <- TRUE
   if (model_data$M > 0) {
-    validate_prior_distribution(control$smooth_prior)
+    validate_prior_distribution(control$smooth_prior,verbose)
     if (!priorvalid) stop("Please specify a valid prior for your smooth terms.")
     # If it's valid, grab the actual function call and set the parameters
     model_data$theta_logprior <- function(theta) {
@@ -378,7 +411,7 @@ model_setup <- function(formula,data,control = cc_control()) {
       do.call(supported_prior_distributions(control$smooth_prior$name)$call,callargs)
     }
   } else {
-    model_data$theta_logprior <- function() {return(0)} # Placeholder
+    model_data$theta_logprior <- function(theta) {force(theta); return(0)} # Placeholder
   }
 
   # log(precision) for prior on beta. Specified in control
@@ -397,15 +430,6 @@ model_setup <- function(formula,data,control = cc_control()) {
     model_data$Xd <- model_data$diffmat %*% model_data$X
   }
 
-  # Random effect model specification data
-  # model_data$modelspec <- NULL
-  # if (model_data$M > 0) {
-  #   model_data$modelspec <- model_data$A %>%
-  #     purrr::map("model") %>%
-  #     purrr::map2(.,names(.),~tibble(covariate = .y,model = .x)) %>%
-  #     purrr::reduce(dplyr::bind_rows)
-  # }
-
   # TODO: linear constraints. The first one should be taken out explicitly then put back
   # in. The others are corrected after. This behaviour does not need to be exposed to the user.
   # model_data$vectorofcolumnstoremove <- round(RW2BINS/2)
@@ -413,6 +437,26 @@ model_setup <- function(formula,data,control = cc_control()) {
   # Check for linear constraints. Validate and then add them to the model data.
   # If there are linear constraints, take the first one for each variable and create the
   # model_data$vectorofcolumnstoremove element.
+  #
+  # UPDATE: actually, I don't think you need to take one from each. Just take the first one.
+  model_data$linear_constraints <- NULL
+  if (length(model_elements$smooth) > 0) {
+    if (length(control$linear_constraints) == 0) {
+      warning("Smooth terms, but no linear constraints, specified. You should add one or more constraints. See create_linear_constraints().")
+    } else {
+      # Take the first one and use it to set one to zero
+      nm <- model_elements$smooth[1]
+      model_data$vectorofcolumnstoremove <- control$linear_constraints[[nm]]$whichzero
+      # Adjust M
+      model_data$M <- model_data$M - 1
+      # Remove this constraint from the list of constraints
+      # ACTUALLY: do I have to...? If I add it back in later I don't think it matters. We'll see.
+    }
+  }
 
+  # Add back the control list and model elements
+  model_data$control <- control
+  model_data$model_elements <- model_elements
 
+  model_data
 }

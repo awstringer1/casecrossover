@@ -46,6 +46,7 @@
 #' @importFrom rlang .data
 #' @importFrom magrittr %>%
 #' @importFrom stats formula terms
+#' @importFrom methods as new
 #' @import Matrix
 #' @export
 cc_control <- function(...) {

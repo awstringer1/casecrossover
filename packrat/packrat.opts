@@ -15,6 +15,9 @@ external.packages:
     stringr
     lubridate
     magrittr
+    microbenchmark
+    matrixStats
+    methods
 local.repos: 
 load.external.packages.on.startup: TRUE
 ignored.packages: 

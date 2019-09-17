@@ -1,6 +1,8 @@
 context("Model setup")
 library(casecrossover)
 library(dplyr) # For tests
+source("prep-sample-data.R")
+
 
 test_that("Placeholder test",{
   expect_equal(1,1)
@@ -21,11 +23,11 @@ test_that("Formula parsing works as expected",{
 })
 
 test_that("Priors created as expected",{
-  expect_true(validate_prior_distribution(pc_prior(u = 3,alpha = .5))) # Test all the supported ones are valid... lol
-  expect_false(validate_prior_distribution(c(1,2,3)))
-  expect_false(validate_prior_distribution(list(name = "alexprior")))
-  expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(u = 1,a = 2))))
-  expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(alpha = 2))))
+  expect_true(validate_prior_distribution(pc_prior(u = 3,alpha = .5),verbose = FALSE)) # Test all the supported ones are valid...
+  expect_false(validate_prior_distribution(c(1,2,3),verbose = FALSE))
+  expect_false(validate_prior_distribution(list(name = "alexprior"),verbose = FALSE))
+  expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(u = 1,a = 2)),verbose = FALSE))
+  expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(alpha = 2)),verbose = FALSE))
 })
 
 uu <- (1:10)[sample(1:10)]
@@ -35,45 +37,23 @@ test_that("Linear constraints created as expected",{
   expect_equal(create_linear_constraints(uu,c(1,2,3))[[1]]$constraint[[1]],sparseVector(1,1,10))
   expect_equal(create_linear_constraints(uu,c(1,2,3))[[1]]$constraint[[2]],sparseVector(1,2,10))
   expect_equal(create_linear_constraints(uu,c(1,2,3))[[1]]$constraint[[3]],sparseVector(1,3,10))
-  expect_true(validate_linear_constraints(create_linear_constraints(uu,1)))
-  expect_true(validate_linear_constraints(create_linear_constraints(uu,c(1,2,3))))
-  expect_false(validate_linear_constraints(c(1,2,3)))
-  expect_false(validate_linear_constraints(list(list(u = 1,constraint = list(c(1,2,3))))))
-  expect_false(validate_linear_constraints(list(u = 1,constraint = list(c(1,2,3)))))
-  expect_false(validate_linear_constraints(list(constraint = list(c(1,2,3)))))
-  expect_false(validate_linear_constraints(list(list(constraint = list(c(1,2,3))))))
-  expect_false(validate_linear_constraints(list(list(u = c(1,2,3,4,5),constraint = list(c(1,2,3))))))
-  expect_false(validate_linear_constraints(list(list(u = c(1,2,3),constraint = list(c(1,2,3))))))
-  expect_false(validate_linear_constraints(list(list(u = c(1,2,3,4,5),constraint = list(sparseVector(1,1,10))))))
+  expect_true(validate_linear_constraints(create_linear_constraints(uu,1),verbose = FALSE))
+  expect_true(validate_linear_constraints(create_linear_constraints(uu,c(1,2,3)),verbose = FALSE))
+  expect_false(validate_linear_constraints(c(1,2,3),verbose = FALSE))
+  expect_false(validate_linear_constraints(list(list(u = 1,constraint = list(c(1,2,3)))),verbose = FALSE))
+  expect_false(validate_linear_constraints(list(u = 1,constraint = list(c(1,2,3))),verbose = FALSE))
+  expect_false(validate_linear_constraints(list(constraint = list(c(1,2,3))),verbose = FALSE))
+  expect_false(validate_linear_constraints(list(list(constraint = list(c(1,2,3)))),verbose = FALSE))
+  expect_false(validate_linear_constraints(list(list(u = c(1,2,3,4,5),constraint = list(c(1,2,3)))),verbose = FALSE))
+  expect_false(validate_linear_constraints(list(list(u = c(1,2,3),constraint = list(c(1,2,3)))),verbose = FALSE))
+  expect_false(validate_linear_constraints(list(list(u = c(1,2,3,4,5),constraint = list(sparseVector(1,1,10)))),verbose = FALSE))
 
   # Check it works with duplicates
-  expect_true(validate_linear_constraints(create_linear_constraints(c(1,1,1,2),1)))
+  expect_true(validate_linear_constraints(create_linear_constraints(c(1,1,1,2),1),verbose = FALSE))
   expect_equal(create_linear_constraints(c(1,1,1,2),1)[[1]]$constraint[[1]],sparseVector(1,1,2))
 })
 
 ### Big part: testing the actual model data is created correctly ###
-# Create some test data
-sampledata <- tibble(
-  id = c(1,1,1,2,2),
-  case1 = c(0,0,1,0,1),
-  case2 = c(0,0,2,0,2),
-  x = c(1,2,3,1,2)
-)
-
-ff1 <- case1 ~ x + strata(id)
-controlsmooth <- cc_control(smooth_prior = pc_prior(3,.75),
-                       linear_constraints = create_linear_constraints(u = sampledata$x,
-                                                                      whichzero = 1,
-                                                                      nm = "x"))
-
-model_data1 <- model_setup(case1 ~ x + strata(id),sampledata)
-model_data2 <- model_setup(case2 ~ x + strata(id),sampledata)
-
-model_data3 <- model_setup(case1 ~ s(x) + strata(id),sampledata,controlsmooth)
-model_data4 <- model_setup(case2 ~ s(x) + strata(id),sampledata,controlsmooth)
-
-model_data5 <- model_setup(case1 ~ x + s(x) + strata(id),sampledata,controlsmooth)
-model_data6 <- model_setup(case2 ~ x + s(x) + strata(id),sampledata,controlsmooth)
 
 
 test_that("Model data created correctly",{

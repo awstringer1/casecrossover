@@ -23,14 +23,23 @@
 #' of the parameters corresponding to each subject's control and case days.
 #'
 prep_data_for_log_lik <- function(W,model_data) {
-  # Take the parameters and model data; return a list of parameters grouped by subject.
-  # This is "deltasplit" in the below functions.
   # Get delta
   delta <- W[1:model_data$Nd]
 
   # Split delta into a list containing the values for each control day for each subject
   split(delta,as.numeric(rep(names(model_data$control_days),model_data$control_days)))
 }
+
+#' Get a vector of case day weights from the model_data
+#'
+#' @description Get a vector of case day weights, repeated once for every parameter
+#' ascribed to each subject. Used inside gradient and hessian calculations as weights.
+#'
+#' @return A numeric vector of case day weights
+#'
+#' @param model_data A list of class "cc_modeldata" as returned by model_setup().
+#'
+get_casedays <- function(model_data) unname(rep(model_data$case_days,model_data$control_days))
 
 #' Compute the log-likelihood for the model at a given parameter configuration
 #'
@@ -72,12 +81,12 @@ log_likelihood <- function(W,model_data) {
 #' because it's (mathematically) not sparse. I guess the end is all zeroes though, so maybe
 #' we should change this...?
 #'
-#' @param W Parameter vector. First n elements are eta, then Gamma and beta.
-#' @param model_data A list of class "cc_modeldata" as returned by model_setup().
+#' @inheritParams log_likelihood
 #'
 grad_log_likelihood <- function(W,model_data) {
   # Split the parameter vector
   deltasplit <- prep_data_for_log_lik(W,model_data)
+  casedays <- get_casedays(model_data)
   # Helper to compute the gradient term
   compute_gradient_term <- function(deltavec) {
     # Compute the denominator
@@ -89,24 +98,31 @@ grad_log_likelihood <- function(W,model_data) {
   # plus zeroes on the end to make it as long as W
   gradient_front <- purrr::map(deltasplit,compute_gradient_term) %>% purrr::reduce(c)
   gradient_back <- rep(0,length(W) - length(gradient_front))
-  c(gradient_front * model_data$case_days,gradient_back)
+  c(gradient_front * casedays,gradient_back)
 }
 
+#' Compute the negated Hessian of the log-likelihood
+#'
+#' @description Function to implement the (sparse) NEGATED hessian of the case-crossover log-likelihood
+#' This is MINUS the second derivative. Because that's what's used in the paper.
+#' So remember when optimizing: provide the NEGATIVE of log_likelihood and gradient_...,
+#' but provide the POSITIVE of this function.
+#'
+#' Two functions are written. hessian_log_likelihood_x() provides the ELEMENTS of the hessian only
+#' This is very fast (134 milliseconds on average for the air pollution example)
+#' hessian_log_likelihood_structure() brute-force computes the hessian using bdiag,
+#' which is an order of magnitude slower (around a second on average). But the structure
+#' never changes, so we only need to compute this once.
+#' hessian_log_likelihood() computes the hessian, but you can supply it the structure and it
+#' will basically just wrap hessian_log_likelihood_x(). Much faster.
+#'
+#' @inheritParams log_likelihood
+#'
+#' @return A sparse matrix inheriting from class CsparseMatrix containing the negated
+#' Hessian of the log-likelihood.
+#'
 
-# Function to implement the (sparse) NEGATED hessian of the case-crossover log-likelihood
-# This is MINUS the second derivative. Because that's what's used in the paper
-# So remember when optimizing: provide the NEGATIVE of log_likelihood and gradient_...,
-# but provide the POSITIVE of this function.
-
-# Two functions are written. hessian_log_likelihood_x() provides the ELEMENTS of the hessian only
-# This is very fast (134 milliseconds on average for the air pollution example)
-# hessian_log_likelihood_structure() brute-force computes the hessian using bdiag,
-# which is an order of magnitude slower (around a second on average). But the structure
-# never changes, so we only need to compute this once.
-# hessian_log_likelihood() computes the hessian, but you can supply it the structure and it
-# will basically just wrap hessian_log_likelihood_x(). Much faster.
-
-hessian_log_likelihood_structure <- function(W,model_data,triplet = FALSE) {
+hessian_log_likelihood_structure <- function(W,model_data) {
   # Arguments: see log_likelihood
   # Returns: a list with i and p for the sparse hessian. NOTE: currently does it
   # for dgCMatrix- i.e. not symmetric. I couldn't figure out how to do it for symmetric.
@@ -142,16 +158,15 @@ hessian_log_likelihood_structure <- function(W,model_data,triplet = FALSE) {
   # UPDATE: changed to symmetric structure.
   structure <- bdiag(blocklist)
   # structure <- forceSymmetric(bdiag(blocklist))
-  if (triplet) {
-    structure <- as(structure,'dgTMatrix')
-    return(list(i = structure@i,j = structure@j))
-  } else {
-    return(list(i = structure@i,p = structure@p))
-  }
+  return(list(i = structure@i,p = structure@p))
 }
+
+#' @rdname hessian_log_likelihood_structure
+#'
 
 hessian_log_likelihood_x <- function(W,model_data) {
   deltasplit <- prep_data_for_log_lik(W,model_data)
+  casedays <- model_data$case_days # Note: this is intentionally different than for the gradient.
 
   # Helper function to create the blocks
   # Takes in a vector of deltasplit and returns a block
@@ -167,14 +182,15 @@ hessian_log_likelihood_x <- function(W,model_data) {
     outmat[upper.tri(outmat,diag = TRUE)]
   }
 
-  purrr::map(deltasplit,compute_hessian_block) %>% purrr::reduce(c)
+  purrr::map2(deltasplit,casedays,
+              ~compute_hessian_block(.x) * .y) %>% purrr::reduce(c)
 
 }
 
-# main_hess <- hessian_log_likelihood_structure(W,model_data)
-# hess_x <- hessian_log_likelihood_x(W,model_data)
-#
-# all(hess_x == main_hess@x) # TRUE!
+#' @rdname hessian_log_likelihood_structure
+#' @param structure Optional. A list returned by hessian_log_likelihood_structure()
+#' which contains the sparse structure of the hessian. Computing this is the slow
+#' part, but only needs to be done once.
 
 hessian_log_likelihood <- function(W,model_data,structure=NULL) {
   # structure is a list containing elements i and p

@@ -63,9 +63,6 @@ parse_formula <- function(ff) {
   )
 }
 
-ff <- y ~ x + s(z) + strata(id) + a*b + log(d) + I(xx^2) + poly(zz,2)
-parse_formula(ff)
-
 
 # INTERNAL: prescribe default control arguments
 cc_default_control <- function() {

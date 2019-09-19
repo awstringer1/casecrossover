@@ -2,6 +2,7 @@
 
 export(cc_control)
 export(create_linear_constraints)
+export(fortify_priors)
 export(model_setup)
 export(pc_prior)
 export(supported_prior_distributions)

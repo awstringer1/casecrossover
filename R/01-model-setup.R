@@ -168,6 +168,59 @@ pc_prior <- function(u,alpha) {
   )
 }
 
+#' Fortify a list of priors
+#'
+#' @description This function takes a list of priors, validates them using validate_prior_distribution(),
+#' and stacks them together into one function that takes a vector argument, representing the joint prior
+#' on all hyperparameters. This enforces prior independence between hyperparameters.
+#'
+#' The user shouldn't have to
+#' use this function; it is exported in case advanced users want to define their own priors.
+#'
+#' @return A function which computes the joint log-prior of all hyperparameters, assuming prior
+#' independence.
+#'
+#' @param priorlist A list of priors, each as created by e.g. pc_prior() or in the same format. Its
+#' elements will be passed to validate_prior_distribution().
+#'
+#' @export
+#'
+fortify_priors <- function(priorlist) {
+  # Validate them
+  priorsvalid <- priorlist %>%
+    purrr::map_lgl(~validate_prior_distribution(.x,verbose = FALSE)) %>%
+    all()
+
+  if (!priorsvalid) {
+    stop("One or more priors failed validation. Check them each using validate_prior_distribution().")
+  }
+
+  # Fortify each of them
+  flist <- list()
+  for (prior in priorlist) {
+    ff <- function(theta) {
+      do.call(supported_prior_distributions(prior$name)$call,as.list(c(theta = theta,prior$params)))
+    }
+    environment(ff) <- new.env()
+    environment(ff)$prior <- prior
+    flist <- c(flist,ff)
+  }
+  flist <- flist %>% purrr::map(rlang::as_function) # Error checking
+
+  # Return one function that computes the joint log-prior
+  f <- function(theta) {
+    # theta is a VECTOR now.
+    # Check the number of priors provided is the same as the number of thetas
+    if (length(theta) != length(flist)) stop(stringr::str_c(length(flist)," priors provided but ",length(theta)," hyperparameters detected."))
+
+    flist %>%
+      purrr::map2(theta,~.x(.y)) %>%
+        purrr::reduce(sum)
+  }
+  rlang::as_function(f)
+}
+
+
 #' Create a linear combination vector for a single-element-zero constraint on a smooth term
 #'
 #' @description The most common and easiest to interpret constraint on a random walk model for
@@ -316,8 +369,6 @@ validate_linear_constraints <- function(constraints,verbose = TRUE) {
 #' @export
 # model_setup <- function(formula,data,control = cc_control(smooth_prior = pc_prior(3,.5))) {}
 model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
-  # TODO: implement this.
-  # TODO: document this.
   model_data <- structure(list(), class = "ccmodeldata")
 
   # Parse the formula
@@ -394,23 +445,15 @@ model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
   model_data$n <- length(model_data$case_days)
   model_data$Nd <- sum(model_data$control_days)
   model_data$Ne <- model_data$Nd + model_data$n
-  model_data$Wd <- model_data$M + model_data$p + model_data$Nd
-  model_data$Wdf <- model_data$M + model_data$p + model_data$Ne
 
   # Priors.
   # Currently only pc prec prior is implemented.
   # Prior u is P(sigma > u) = alpha.
-  #
-  # First, validate the user's prior is correctly specified
-  priorvalid <- TRUE
+
+  if (length(control$smooth_prior) != length(model_elements$smooth)) stop(stringr::str_c(length(control$smooth_prior)," priors provided for ",length(model_elements$smooth)," hyperparameters."))
+
   if (model_data$M > 0) {
-    validate_prior_distribution(control$smooth_prior,verbose)
-    if (!priorvalid) stop("Please specify a valid prior for your smooth terms.")
-    # If it's valid, grab the actual function call and set the parameters
-    model_data$theta_logprior <- function(theta) {
-      callargs <- as.list(c(theta = theta,control$smooth_prior$params))
-      do.call(supported_prior_distributions(control$smooth_prior$name)$call,callargs)
-    }
+    model_data$theta_logprior <- fortify_priors(control$smooth_prior)
   } else {
     model_data$theta_logprior <- function(theta) {force(theta); return(0)} # Placeholder
   }
@@ -440,20 +483,23 @@ model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
   # model_data$vectorofcolumnstoremove element.
   #
   # UPDATE: actually, I don't think you need to take one from each. Just take the first one.
-  model_data$linear_constraints <- NULL
   if (length(model_elements$smooth) > 0) {
-    if (length(control$linear_constraints) == 0) {
+    if (length(control$linear_constraints) != length(model_elements$smooth)) {
       warning("Smooth terms, but no linear constraints, specified. You should add one or more constraints. See create_linear_constraints().")
     } else {
       # Take the first one and use it to set one to zero
       nm <- model_elements$smooth[1]
-      model_data$vectorofcolumnstoremove <- control$linear_constraints[[nm]]$whichzero
+      model_data$vectorofcolumnstoremove <- control$linear_constraints[[nm]]$whichzero[1]
       # Adjust M
       model_data$M <- model_data$M - 1
       # Remove this constraint from the list of constraints
       # ACTUALLY: do I have to...? If I add it back in later I don't think it matters. We'll see.
     }
   }
+
+  # Set final dimensions
+  model_data$Wd <- model_data$M + model_data$p + model_data$Nd
+  model_data$Wdf <- model_data$M + model_data$p + model_data$Ne
 
   # Add back the control list and model elements
   model_data$control <- control

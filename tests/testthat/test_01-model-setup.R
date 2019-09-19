@@ -20,6 +20,7 @@ test_that("Formula parsing works as expected",{
   expect_length(parse_formula(y ~ x + strata(id)),PARSELENGTH)
   expect_length(parse_formula(y ~ s(z) + strata(id)),PARSELENGTH)
   expect_length(parse_formula(y ~ x + s(z) + strata(id)),PARSELENGTH)
+  expect_length(parse_formula(y ~ s(x) + s(z) + strata(id)),PARSELENGTH)
 })
 
 test_that("Priors created as expected",{
@@ -28,6 +29,21 @@ test_that("Priors created as expected",{
   expect_false(validate_prior_distribution(list(name = "alexprior"),verbose = FALSE))
   expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(u = 1,a = 2)),verbose = FALSE))
   expect_false(validate_prior_distribution(list(name = "pc.prec",params = c(alpha = 2)),verbose = FALSE))
+})
+
+# Fortify multiple priors
+prior1 <- function(theta) prior_calls$pc.prec(theta,3,.75)
+prior2 <- function(theta) prior_calls$pc.prec(theta,1,.5)
+prior3 <- function(theta) prior_calls$pc.prec(theta,5,.95)
+
+prior1f <- pc_prior(3,.75)
+prior2f <- pc_prior(1,.5)
+prior3f <- pc_prior(5,.95)
+
+test_that("Fortifying priors works as expected",{
+  expect_equal(fortify_priors(list(prior1f))(1),prior1(1))
+  expect_equal(fortify_priors(list(prior1f,prior2f))(c(1,1)),prior1(1) + prior2(1))
+  expect_equal(fortify_priors(list(prior1f,prior2f,prior3f))(c(1,2,3)),prior1(1) + prior2(2) + prior3(3))
 })
 
 uu <- (1:10)[sample(1:10)]
@@ -75,7 +91,7 @@ test_that("Model data created correctly",{
   expect_length(model_data1$model_elements$smooth,0)
 
   # Check creation of smooth terms works correctly
-  expect_warning(model_setup(case1 ~ s(x) + strata(id),sampledata)) # No constraints specified
+  expect_error(model_setup(case1 ~ s(x) + strata(id),sampledata)) # No priors.
   expect_equal(model_data3$M,2)
   expect_equal(names(model_data3$A),"x")
   expect_length(model_data3$A,1)
@@ -148,7 +164,7 @@ test_that("Model data created correctly",{
   expect_equal(model_data6$Nd,3)
   expect_equal(model_data6$n,2)
 
-  ## Test that the prior is specified with the correct parameters
+  ## Test that the prior is specified with the correct parameters ##
 
   # Function should always take one argument
   expect_error(model_data1$theta_logprior())
@@ -167,16 +183,22 @@ test_that("Model data created correctly",{
   expect_equal(model_data3$theta_logprior(-1),pcprec(-1,3,.75))
   expect_equal(
     model_setup(case1 ~ s(x) + strata(id),sampledata,
-                control = cc_control(smooth_prior = pc_prior(1,.5),
+                control = cc_control(smooth_prior = list(pc_prior(1,.5)),
                                      linear_constraints = create_linear_constraints(u = sampledata$x,
                                                                                     whichzero = 1,
                                                                                     nm = "x"))
     )$theta_logprior(1),pcprec(1,1,.5)
   ) # Different parameters
 
-  # Linear constraints
-  expect_warning(model_setup(case1 ~ s(x) + strata(id),sampledata)) # Smooth terms but no constraints.
+  # Multiple thetas
+  expect_error(model_setup(case1 ~ s(x) + s(x2) + strata(id),data = sampledata,control = controlsmooth))
+  expect_equal(model_data7$theta_logprior(c(1,2)),pcprec(1,3,.75) + pcprec(2,5,.1))
 
+  # Linear constraints
+  expect_warning(model_setup(case1 ~ s(x) + strata(id),sampledata,control = cc_control(smooth_prior = list(pc_prior(3,.75))))) # Smooth terms but no constraints.
+  expect_null(model_data1$vectorofcolumnstoremove)
+  expect_equal(model_data3$vectorofcolumnstoremove,1)
+  expect_equal(model_data7$vectorofcolumnstoremove,1)
 })
 
 

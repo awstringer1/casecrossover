@@ -31,6 +31,23 @@ controlsmooth2 <- cc_control(
   )
 )
 
+controlsmooth3 <- cc_control(
+  smooth_prior = list(
+    pc_prior(3,.75),
+    pc_prior(5,.1)
+  ),
+  linear_constraints = c(
+    create_linear_constraints(u = sampledata$x,
+                              whichzero = 1,
+                              nm = "x"),
+    create_linear_constraints(u = sampledata$x2,
+                              whichzero = c(2,6),
+                              nm = "x2")
+  )
+)
+
+
+
 model_data1 <- model_setup(case1 ~ x + strata(id),sampledata)
 model_data2 <- model_setup(case2 ~ x + strata(id),sampledata)
 
@@ -45,6 +62,8 @@ model_data8 <- model_setup(case2 ~ s(x) + s(x2) + strata(id),sampledata,controls
 
 model_data9 <- model_setup(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
 model_data10 <- model_setup(case2 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
+
+model_data11 <- model_setup(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth3)
 
 
 

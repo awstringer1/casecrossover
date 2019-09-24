@@ -3,7 +3,7 @@ Type: Package
 Title: Approximate Bayesian Inference for Case Crossover Models
 Version: 0.1.0
 Authors@R: person("Alex","Stringer",email = "alex.stringer@mail.utoronto.ca",role = c("cre","aut"))
-Maintainer: The package maintainer <yourself@somewhere.net>
+Maintainer: Alex Stringer <alex.stringer@mail.utoronto.ca>
 Description: Implementation of the methodology described in ...
     This package fits case crossover models with linear or smooth terms
     for covariate effects, using approximate Bayesian inference. Marginal
@@ -25,10 +25,12 @@ Imports:
   stringr,
   purrr,
   matrixStats,
-  methods
+  methods,
+  trustOptim
 RoxygenNote: 6.1.1
 Suggests: 
     knitr,
     rmarkdown,
-    testthat
+    testthat,
+    parallel
 VignetteBuilder: knitr

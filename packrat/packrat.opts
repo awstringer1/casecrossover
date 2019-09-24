@@ -19,6 +19,8 @@ external.packages:
     matrixStats
     methods
     mvtnorm
+    trustOptim
+    parallel
 local.repos: 
 load.external.packages.on.startup: TRUE
 ignored.packages: 

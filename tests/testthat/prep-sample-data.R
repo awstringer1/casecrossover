@@ -119,3 +119,11 @@ logpost7 <- add_log_posterior_values(opt_7,model_data7)
 logpost8 <- add_log_posterior_values(opt_8,model_data8)
 
 
+
+# Proper indexing
+index1 <- get_indices(model_data1)
+index3 <- get_indices(model_data3)
+index5 <- get_indices(model_data5)
+index7 <- get_indices(model_data7)
+
+

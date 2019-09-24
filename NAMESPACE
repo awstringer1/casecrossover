@@ -2,8 +2,10 @@
 
 export(add_log_posterior_values)
 export(cc_control)
+export(compute_marginal_means_and_variances)
 export(create_linear_constraints)
 export(fortify_priors)
+export(get_indices)
 export(model_setup)
 export(normalize_log_posterior)
 export(optimize_all_thetas_parallel)

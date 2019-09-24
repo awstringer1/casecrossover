@@ -66,3 +66,26 @@ test_that("Normalizing the posterior works as expected",{
   expect_equal(round(normalize_log_posterior(dbeta(x3,2,3,log=TRUE),x3),1),0)
   expect_equal(round(normalize_log_posterior(dbeta(x3,.5,1,log=TRUE),x3),1),0)
 })
+
+# Obtaining the correct indices for model terms
+test_that("Obtaining indices works as expected",{
+  expect_s3_class(index1,"ccindex")
+  expect_s3_class(index3,"ccindex")
+  expect_s3_class(index5,"ccindex")
+  expect_s3_class(index7,"ccindex")
+
+  expect_equal(index1$linear,c("x" = 4))
+  expect_null(index1$smooth)
+
+  expect_null(index3$linear)
+  expect_equal(index3$smooth,c("x" = 4,"x" = 5))
+
+  expect_equal(index5$linear,c("x" = 6))
+  expect_equal(index5$smooth,c("x" = 4,"x" = 5))
+
+  expect_null(index7$linear)
+  expect_equal(index7$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10))
+
+})
+
+

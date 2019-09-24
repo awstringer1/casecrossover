@@ -43,6 +43,11 @@ model_data6 <- model_setup(case2 ~ x + s(x) + strata(id),sampledata,controlsmoot
 model_data7 <- model_setup(case1 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
 model_data8 <- model_setup(case2 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
 
+model_data9 <- model_setup(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
+model_data10 <- model_setup(case2 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
+
+
+
 # Optimization
 
 optcontrol <- cc_control()$opt_control # Defaults
@@ -125,5 +130,6 @@ index1 <- get_indices(model_data1)
 index3 <- get_indices(model_data3)
 index5 <- get_indices(model_data5)
 index7 <- get_indices(model_data7)
+index9 <- get_indices(model_data9)
 
 

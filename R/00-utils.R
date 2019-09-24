@@ -55,12 +55,37 @@ parse_formula <- function(ff) {
 
   # Return a named list of vectors with the names of each type of term
   list(
-    linear = attributes(terms(ff))$term.labels,
+    # linear = attributes(terms(ff))$term.labels,
+    linear = setdiff(all.vars(ff),response),
     linear_formula = ff,
     smooth = smooth,
     strata = strata,
     response = response
   )
+}
+
+# INTERNAL: get the degree of a polynomial from a formula
+get_polynomial_degree <- function(ff) {
+  ffvars <- all.vars(ff)[-1]
+  ffattr <- attributes(terms(ff))$term.labels
+
+  degree_1 <- stringr::str_extract(ffattr,"^[A-Za-z0-9]+$")
+  degree_1 <- degree_1[!is.na(degree_1)]
+
+  degree_more_than_1 <- stringr::str_extract(ffattr,"^poly\\([A-Za-z0-9]+\\,\\s?[0-9]\\)$")
+  degree_more_than_1 <- degree_more_than_1[!is.na(degree_more_than_1)]
+
+  # Get the names
+  deg_mt1_names <- stringr::str_remove(degree_more_than_1,"^poly\\(") %>%
+    stringr::str_remove("\\,\\s?[0-9]\\)$")
+
+  deg_mt1_degrees <- stringr::str_remove(degree_more_than_1,"^poly\\([A-Za-z0-9]+\\,\\s?") %>%
+    stringr::str_remove("\\)$") %>%
+      as.numeric()
+
+  out <- c(rep(1,length(degree_1)),deg_mt1_degrees)
+  names(out) <- c(degree_1,deg_mt1_names)
+  out
 }
 
 
@@ -138,3 +163,6 @@ create_full_dtcp_matrix <- function(control_days) {
 prior_calls <- list(
   pc.prec = pcprec
 )
+
+
+

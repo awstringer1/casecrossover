@@ -9,6 +9,9 @@ get_indices(model_data)
 \arguments{
 \item{model_data}{ccmodeldata object as returned by model_setup().}
 }
+\value{
+A list of class ccindex containing vectors of indices for the linear and smooth terms.
+}
 \description{
 The organization of the latent field is confusing. There
 are random effects and fixed effects, plus the actual linear predictor values

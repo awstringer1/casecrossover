@@ -21,6 +21,18 @@ test_that("Formula parsing works as expected",{
   expect_length(parse_formula(y ~ s(z) + strata(id)),PARSELENGTH)
   expect_length(parse_formula(y ~ x + s(z) + strata(id)),PARSELENGTH)
   expect_length(parse_formula(y ~ s(x) + s(z) + strata(id)),PARSELENGTH)
+
+  # Polynomial degree
+  expect_equal(get_polynomial_degree(case ~ x),c("x" = 1))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,2)),c("x" = 1,"z" = 2))
+  expect_equal(get_polynomial_degree(case ~ poly(z,4) + x),c("x" = 1,"z" = 4))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,2) + poly(zz,3)),c("x" = 1,"z" = 2,"zz" = 3))
+  expect_equal(get_polynomial_degree(case ~ x + s(x)),c("x" = 1))
+  expect_equal(get_polynomial_degree(case ~ x + s(z)),c("x" = 1))
+  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,2)),c("x" = 1,"zz" = 2))
+  expect_equal(get_polynomial_degree(case ~ x1 + x2),c("x1" = 1,"x2" = 1))
+  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,2)),c("x1" = 1,"x2" = 2))
+
 })
 
 test_that("Priors created as expected",{

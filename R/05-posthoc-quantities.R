@@ -80,6 +80,8 @@ normalize_log_posterior <- function(pp,tt) {
 #'
 #' @param model_data ccmodeldata object as returned by model_setup().
 #'
+#' @return A list of class ccindex containing vectors of indices for the linear and smooth terms.
+#'
 #' @export
 #'
 get_indices <- function(model_data) {
@@ -93,18 +95,18 @@ get_indices <- function(model_data) {
   } else if (model_data$p == 0) {
     # No linear terms
     out$smooth <- (model_data$Nd+1):(model_data$Nd+model_data$M)
-    # Figure out the number of smooth effects for each covariate
-    numterms <- model_data$A %>%
+    covvalues <- model_data$A %>%
       purrr::map("u") %>%
       purrr::map(unique) %>%
+      purrr::map(sort)
+    numterms <- covvalues %>%
       purrr::map(length)
     numtermsvec <- purrr::reduce(numterms,c)
     names(numtermsvec) <- names(numterms)
-    # Account for the fact that we've potentially set one of the first
-    # smooth covariate's effects to zero, through a linear constraint.
     if (!is.null(model_data$vectorofcolumnstoremove)) {
       if (model_data$vectorofcolumnstoremove != 0) {
         numtermsvec[1] <- numtermsvec[1] - 1
+        covvalues[[1]] <- covvalues[[1]][-model_data$vectorofcolumnstoremove]
       }
     }
 
@@ -113,25 +115,125 @@ get_indices <- function(model_data) {
   } else {
     # Both linear and smooth terms
     out$smooth <- (model_data$Nd+1):(model_data$Nd+model_data$M)
-    numterms <- model_data$A %>%
+    covvalues <- model_data$A %>%
       purrr::map("u") %>%
       purrr::map(unique) %>%
+      purrr::map(sort)
+    numterms <- covvalues %>%
       purrr::map(length)
     numtermsvec <- purrr::reduce(numterms,c)
     names(numtermsvec) <- names(numterms)
     if (!is.null(model_data$vectorofcolumnstoremove)) {
       if (model_data$vectorofcolumnstoremove != 0) {
         numtermsvec[1] <- numtermsvec[1] - 1
+        covvalues[[1]] <- covvalues[[1]][-model_data$vectorofcolumnstoremove]
       }
     }
 
     names(out$smooth) <- rep(names(numtermsvec),numtermsvec)
     out$linear <- (model_data$Nd+model_data$M+1):(model_data$Nd+model_data$M+model_data$p)
-    names(out$linear) <- model_elements$linear
+    degrees <- get_polynomial_degree(model_elements$linear_formula)
+    names(out$linear) <- rep(names(degrees),degrees)
+    out$covvalues <- covvalues
   }
   out
 }
 
+#' Marginal means/variances for linear combinations of latent variables
+#'
+#' @description The compute_marginal_means_and_variances() function lets you specify a sparse matrix of
+#' linear combinations of latent variables to compute the marginal means and variances of. The most
+#' common use case for this is when you have included an effect as both linear and smooth, and you
+#' need the marginal mean and variance of the linear predictor. You need to account for the correlation
+#' between the posterior regression coefficient and posterior random effect.
+#'
+#' Because this is a common use case, this function takes in your model_data and returns a correctly
+#' formatted matrix which specifies that you want means/variances for the linear predictors from all
+#' terms which appear in the model both as linear and smooth effects.
+#'
+#' @param model_data ccmodeldata object output by model_setup()
+#'
+#' @return A sparse matrix with one column per necessary linear combination
+#'
+#' @export
+#'
+make_model_lincombs <- function(model_data) {
+  # Check to make sure both linear and smooth terms in the model
+  if (length(model_data$model_elements$linear) == 0 | length(model_data$model_elements$smooth) == 0) {
+    stop("You should only be looking at linear combinations if there are both linear and smooth terms in your model.")
+  }
+  # Check to see if the SAME term is included as both linear and smooth.
+  if (length(intersect(model_data$model_elements$linear,model_data$model_elements$smooth)) == 0) {
+    stop("You have linear and smooth terms in your model, but I don't see any overlap. You should only use this function to create linear combinations for terms in your model that are included as both linear and smooth")
+  }
+
+  # Determine the degree of polynomial for each covariate
+  polydegrees <- get_polynomial_degree(model_data$model_elements$linear_formula)
+
+  # Get the indices for all terms
+  indices <- get_indices(model_data)
+  smooth_terms <- unique(names(indices$smooth))
+  linear_terms <- unique(names(indices$linear))
+  # The terms we use are the terms that appear both in smooth and linear
+  terms_to_use <- intersect(smooth_terms,linear_terms)
+
+
+  # Helper to create a single linear combination
+  create_single_lincomb <- function(u,idx,degree) {
+    # u: value of the covariate
+    # idx: index of random effect U to which u corresponds
+    # degree: the degree of polynomial used in the model.
+    betavec <- u^(1:degree)
+
+    ll <- sparseVector(x = c(1,betavec),
+                       i = c(idx,(model_data$Nd + model_data$M + 1):(model_data$Wd)),
+                       length = model_data$Wd
+    )
+
+    as(ll,"sparseMatrix")
+  }
+
+  # Create the linear combinations
+  lincomblist <- list()
+  for (nm in terms_to_use) {
+    degree <- polydegrees[names(polydegrees) == nm]
+    idx <- indices$smooth[names(indices$smooth) == nm]
+    linear_idx <- indices$linear[names(indices$linear) == nm]
+    u <- indices$covvalues[[nm]]
+    for (j in 1:length(u)) {
+      betavec <- u[j]^(1:degree)
+      ll <- sparseVector(
+        x = c(1,betavec),
+        i = c(idx[j],linear_idx),
+        length = model_data$Wd
+      )
+      lincomblist <- c(lincomblist,ll)
+    }
+  }
+
+  # Note: not the fastest way to do this. See stackoverflow:
+  # https://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors#8844057
+  # It's about 2x - 3x faster in benchmarking; not worth introducing new code.
+
+  lincomblist %>%
+    purrr::map(~as(.,"sparseMatrix")) %>%
+    purrr::reduce(cbind)
+}
+
+
+# Create a matrix of linear combinations corresponding to the elements of u
+# The middle element, where U = 0, should still have a variance, due to beta
+# uu <- sort(unique(model_data$A$exposure$u))
+# ii <- c(
+#   1:(model_data$vectorofcolumnstoremove - 1),
+#   0,
+#   (model_data$vectorofcolumnstoremove:(RW2BINS-1))
+# )
+#
+#
+# lincomb <- purrr::map2(uu,ii,
+#                        ~create_single_lincomb(.x,.y,POLYNOMIAL_DEGREE)) %>%
+#   purrr::reduce(cbind)
 
 #' Compute marginal means and variances
 #'
@@ -153,6 +255,7 @@ get_indices <- function(model_data) {
 #' whose means/variances you would like to compute, or an object of class cclincomb output by make_model_lincombs()
 #'
 #' @export
+#'
 
 compute_marginal_means_and_variances <- function(i,model_results,model_data,constrA = NULL,lincomb = NULL) {
   if (nrow(model_results) > 1) {

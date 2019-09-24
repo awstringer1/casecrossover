@@ -1,0 +1,68 @@
+context("Post-hoc")
+library(casecrossover)
+library(dplyr) # For tests
+source("prep-sample-data.R")
+
+
+# Log-posterior of theta
+# The log-posterior function already tested, so just test that the output is consistent
+# Also, test the computation of the sigma log-posterior.
+
+test_that("Theta and sigma log-posteriors computed correctly",{
+  expect_s3_class(logpost1,"tbl_df")
+  expect_equal(logpost1$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost1$sigma[[1]]),logpost1$solution[[1]],model_data1))
+  expect_equal(logpost1$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost1$sigma[[2]]),logpost1$solution[[2]],model_data1))
+  expect_equal(logpost1$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost1$sigma[[3]]),logpost1$solution[[3]],model_data1))
+
+  expect_s3_class(logpost2,"tbl_df")
+  expect_equal(logpost2$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost2$sigma[[1]]),logpost2$solution[[1]],model_data2))
+  expect_equal(logpost2$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost2$sigma[[2]]),logpost2$solution[[2]],model_data2))
+  expect_equal(logpost2$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost2$sigma[[3]]),logpost2$solution[[3]],model_data2))
+
+  expect_s3_class(logpost3,"tbl_df")
+  expect_equal(logpost3$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost3$sigma[[1]]),logpost3$solution[[1]],model_data3))
+  expect_equal(logpost3$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost3$sigma[[2]]),logpost3$solution[[2]],model_data3))
+  expect_equal(logpost3$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost3$sigma[[3]]),logpost3$solution[[3]],model_data3))
+
+  expect_s3_class(logpost4,"tbl_df")
+  expect_equal(logpost4$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost4$sigma[[1]]),logpost4$solution[[1]],model_data4))
+  expect_equal(logpost4$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost4$sigma[[2]]),logpost4$solution[[2]],model_data4))
+  expect_equal(logpost4$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost4$sigma[[3]]),logpost4$solution[[3]],model_data4))
+
+  expect_s3_class(logpost5,"tbl_df")
+  expect_equal(logpost5$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost5$sigma[[1]]),logpost5$solution[[1]],model_data5))
+  expect_equal(logpost5$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost5$sigma[[2]]),logpost5$solution[[2]],model_data5))
+  expect_equal(logpost5$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost5$sigma[[3]]),logpost5$solution[[3]],model_data5))
+
+  expect_s3_class(logpost6,"tbl_df")
+  expect_equal(logpost6$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost6$sigma[[1]]),logpost6$solution[[1]],model_data6))
+  expect_equal(logpost6$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost6$sigma[[2]]),logpost6$solution[[2]],model_data6))
+  expect_equal(logpost6$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost6$sigma[[3]]),logpost6$solution[[3]],model_data6))
+
+  expect_s3_class(logpost7,"tbl_df")
+  expect_equal(logpost7$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost7$sigma[[1]]),logpost7$solution[[1]],model_data7))
+  expect_equal(logpost7$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost7$sigma[[2]]),logpost7$solution[[2]],model_data7))
+  expect_equal(logpost7$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost7$sigma[[3]]),logpost7$solution[[3]],model_data7))
+
+  expect_s3_class(logpost8,"tbl_df")
+  expect_equal(logpost8$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost8$sigma[[1]]),logpost8$solution[[1]],model_data8))
+  expect_equal(logpost8$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost8$sigma[[2]]),logpost8$solution[[2]],model_data8))
+  expect_equal(logpost8$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost8$sigma[[3]]),logpost8$solution[[3]],model_data8))
+})
+
+# Posterior normalization
+# Try some density functions, which integrate to 1 (so log(normconst) == 0)
+# Test equality to 3 decimal places.
+# The beta distribution is a very difficult case; test to 1 decimal place.
+x1 <- seq(-10,10,by = .01) # Real line
+x2 <- seq(0,50,by = .01) # Positive reals
+x3 <- seq(0.00001,1-.00001,by = 0.00001) # (0,1)
+
+test_that("Normalizing the posterior works as expected",{
+  expect_equal(round(normalize_log_posterior(dnorm(x1,log=TRUE),x1),3),0)
+  expect_equal(round(normalize_log_posterior(dgamma(x2,1,1,log=TRUE),x2),3),0)
+  expect_equal(round(normalize_log_posterior(dgamma(x2,2,3,log=TRUE),x2),3),0)
+  expect_equal(round(normalize_log_posterior(dbeta(x3,1,1,log=TRUE),x3),3),0)
+  expect_equal(round(normalize_log_posterior(dbeta(x3,2,3,log=TRUE),x3),1),0)
+  expect_equal(round(normalize_log_posterior(dbeta(x3,.5,1,log=TRUE),x3),1),0)
+})

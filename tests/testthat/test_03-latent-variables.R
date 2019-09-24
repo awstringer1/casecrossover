@@ -322,9 +322,6 @@ test_that("Log posterior for theta is computed correctly",{
   expect_equal(log_posterior_theta(c(-5,-5),W73,model_data7),lpt_inefficient(c(-5,-5),W73,model_data7))
   expect_equal(log_posterior_theta(c(0,0),W74,model_data7),lpt_inefficient(c(0,0),W74,model_data7))
   expect_equal(log_posterior_theta(c(-5,-5),W74,model_data7),lpt_inefficient(c(-5,-5),W74,model_data7))
-
-
-
 })
 
 

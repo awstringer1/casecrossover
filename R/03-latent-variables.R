@@ -283,9 +283,10 @@ log_posterior_theta <- function(theta,W,model_data,hessian_structure = NULL,Q = 
 #' @param sigma Vector of standard deviations at which to evaluate the log-posterior. sigma = exp(-.5 * theta)
 #'
 log_posterior_sigma <- function(sigma,W,model_data,hessian_structure = NULL,Q = NULL) {
-  log(2/sigma) + log_posterior_theta(theta = -2 * log(sigma),
-                                     W = W,
-                                     model_data = model_data,
-                                     hessian_structure = hessian_structure,
-                                     Q = Q)
+  length(sigma)* log(2) - sum(log(sigma)) +
+    log_posterior_theta(theta = -2 * log(sigma),
+                         W = W,
+                         model_data = model_data,
+                         hessian_structure = hessian_structure,
+                         Q = Q)
 }

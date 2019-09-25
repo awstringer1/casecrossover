@@ -1,7 +1,7 @@
 context("Model setup")
 library(casecrossover)
 library(dplyr) # For tests
-source("prep-sample-data.R")
+# source("prep-sample-data.R")
 
 
 test_that("Placeholder test",{
@@ -33,6 +33,10 @@ test_that("Formula parsing works as expected",{
   expect_equal(get_polynomial_degree(case ~ x1 + x2),c("x1" = 1,"x2" = 1))
   expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,2)),c("x1" = 1,"x2" = 2))
 
+  expect_equal(get_polynomial_degree(case ~ poly(z,4,raw = TRUE) + x),c("x" = 1,"z" = 4))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,2,raw = TRUE) + poly(zz,3,raw = TRUE)),c("x" = 1,"z" = 2,"zz" = 3))
+  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,2,raw = TRUE)),c("x" = 1,"zz" = 2))
+  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,2,raw = TRUE)),c("x1" = 1,"x2" = 2))
 })
 
 test_that("Priors created as expected",{
@@ -117,7 +121,7 @@ test_that("Model data created correctly",{
   expect_equal(model_data3$vectorofcolumnstoremove,1)
 
   # Check that creating smooth and linear terms with the same variable works
-  expect_equal(model_data1$p,1)
+  expect_equal(model_data5$p,1)
   expect_equal(ncol(model_data5$X),1)
   expect_equal(nrow(model_data5$X),5)
   expect_equal(ncol(model_data5$Xd),1)
@@ -136,6 +140,55 @@ test_that("Model data created correctly",{
   expect_equal(nrow(model_data5$A$x$Ad),3)
   expect_equal(model_data5$vectorofcolumnstoremove,1)
 
+  # Check that multiple smooth terms work
+  expect_equal(model_data7$p,0)
+  expect_null(model_data7$X)
+
+  expect_equal(model_data7$M,7)
+  expect_equal(names(model_data7$A),c("x","x2"))
+  expect_length(model_data7$A,2)
+  expect_s4_class(model_data7$A$x$A,"CsparseMatrix")
+  expect_s4_class(model_data7$A$x$Ad,"CsparseMatrix")
+  expect_equal(ncol(model_data7$A$x$A),3)
+  expect_equal(nrow(model_data7$A$x$A),5)
+  expect_equal(ncol(model_data7$A$x$Ad),3)
+  expect_equal(nrow(model_data7$A$x$Ad),3)
+  expect_s4_class(model_data7$A$x2$A,"CsparseMatrix")
+  expect_s4_class(model_data7$A$x2$Ad,"CsparseMatrix")
+  expect_equal(ncol(model_data7$A$x2$A),5)
+  expect_equal(nrow(model_data7$A$x2$A),5)
+  expect_equal(ncol(model_data7$A$x2$Ad),5)
+  expect_equal(nrow(model_data7$A$x2$Ad),3)
+
+  expect_equal(model_data7$vectorofcolumnstoremove,1)
+
+  # Check that multiple smooth terms with polynomials works
+  expect_equal(model_data9$p,5)
+  expect_equal(ncol(model_data9$X),5)
+  expect_equal(nrow(model_data9$X),5)
+  expect_equal(ncol(model_data9$Xd),5)
+  expect_equal(nrow(model_data9$Xd),3)
+  expect_s4_class(model_data9$X,"CsparseMatrix")
+  expect_s4_class(model_data9$Xd,"CsparseMatrix")
+
+  expect_equal(model_data9$M,7)
+  expect_equal(names(model_data9$A),c("x","x2"))
+  expect_length(model_data9$A,2)
+  expect_s4_class(model_data9$A$x$A,"CsparseMatrix")
+  expect_s4_class(model_data9$A$x$Ad,"CsparseMatrix")
+  expect_equal(ncol(model_data9$A$x$A),3)
+  expect_equal(nrow(model_data9$A$x$A),5)
+  expect_equal(ncol(model_data9$A$x$Ad),3)
+  expect_equal(nrow(model_data9$A$x$Ad),3)
+  expect_s4_class(model_data9$A$x2$A,"CsparseMatrix")
+  expect_s4_class(model_data9$A$x2$Ad,"CsparseMatrix")
+  expect_equal(ncol(model_data9$A$x2$A),5)
+  expect_equal(nrow(model_data9$A$x2$A),5)
+  expect_equal(ncol(model_data9$A$x2$Ad),5)
+  expect_equal(nrow(model_data9$A$x2$Ad),3)
+
+  expect_equal(model_data9$vectorofcolumnstoremove,1)
+
   # Check control days and case days correctly recorded
   expect_equal(model_data1$control_days,c("1" = 2,"2" = 1))
   expect_equal(model_data2$control_days,c("1" = 2,"2" = 1))
@@ -143,6 +196,12 @@ test_that("Model data created correctly",{
   expect_equal(model_data4$control_days,c("1" = 2,"2" = 1))
   expect_equal(model_data5$control_days,c("1" = 2,"2" = 1))
   expect_equal(model_data6$control_days,c("1" = 2,"2" = 1))
+  expect_equal(model_data7$control_days,c("1" = 2,"2" = 1))
+  expect_equal(model_data8$control_days,c("1" = 2,"2" = 1))
+  expect_equal(model_data9$control_days,c("1" = 2,"2" = 1))
+  expect_equal(model_data10$control_days,c("1" = 2,"2" = 1))
+  expect_equal(model_data11$control_days,c("1" = 2,"2" = 1))
+
 
   expect_equal(model_data1$case_days,c("1" = 1,"2" = 1))
   expect_equal(model_data2$case_days,c("1" = 2,"2" = 2))
@@ -150,6 +209,12 @@ test_that("Model data created correctly",{
   expect_equal(model_data4$case_days,c("1" = 2,"2" = 2))
   expect_equal(model_data5$case_days,c("1" = 1,"2" = 1))
   expect_equal(model_data6$case_days,c("1" = 2,"2" = 2))
+  expect_equal(model_data7$case_days,c("1" = 1,"2" = 1))
+  expect_equal(model_data8$case_days,c("1" = 2,"2" = 2))
+  expect_equal(model_data9$case_days,c("1" = 1,"2" = 1))
+  expect_equal(model_data10$case_days,c("1" = 2,"2" = 2))
+  expect_equal(model_data11$case_days,c("1" = 1,"2" = 1))
+
 
   # Check dimensions correctly calculated
   expect_equal(model_data1$Ne,5)
@@ -175,6 +240,26 @@ test_that("Model data created correctly",{
   expect_equal(model_data6$Ne,5)
   expect_equal(model_data6$Nd,3)
   expect_equal(model_data6$n,2)
+
+  expect_equal(model_data7$Ne,5)
+  expect_equal(model_data7$Nd,3)
+  expect_equal(model_data7$n,2)
+
+  expect_equal(model_data8$Ne,5)
+  expect_equal(model_data8$Nd,3)
+  expect_equal(model_data8$n,2)
+
+  expect_equal(model_data9$Ne,5)
+  expect_equal(model_data9$Nd,3)
+  expect_equal(model_data9$n,2)
+
+  expect_equal(model_data10$Ne,5)
+  expect_equal(model_data10$Nd,3)
+  expect_equal(model_data10$n,2)
+
+  expect_equal(model_data11$Ne,5)
+  expect_equal(model_data11$Nd,3)
+  expect_equal(model_data11$n,2)
 
   ## Test that the prior is specified with the correct parameters ##
 

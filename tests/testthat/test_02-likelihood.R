@@ -1,7 +1,7 @@
 context("Likelihood")
 library(casecrossover)
 library(dplyr) # For tests
-source("prep-sample-data.R")
+# source("prep-sample-data.R")
 
 # Prep data for log-lik
 dataprep1 <- prep_data_for_log_lik(W = 1:model_data1$Wd,model_data = model_data1) # Linear, case == 1

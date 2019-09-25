@@ -107,6 +107,8 @@ Q_matrix_both <- function(theta,model_data,tau = exp(12)) {
 
   howmanyrw2 <- length(whichrw2)
 
+  if (length(theta) != howmanyrw2) stop(stringr::str_c("Detected ",howmanyrw2," RW2 components in model, but length(theta) = ",length(theta),". Make sure your model is correctly specified."))
+
   Suinv <- purrr::map2(whichrw2,1:howmanyrw2,
                        ~Q_matrix_rw2_one_component(theta[.y],model_data,covariate = .x)) %>%
     bdiag()

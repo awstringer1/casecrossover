@@ -2,7 +2,7 @@
 
 
 
-sampledata <- tibble(
+sampledata <- dplyr::tibble(
   id = c(1,1,1,2,2),
   case1 = c(0,0,1,0,1),
   case2 = c(0,0,2,0,2),
@@ -60,7 +60,7 @@ model_data6 <- model_setup(case2 ~ x + s(x) + strata(id),sampledata,controlsmoot
 model_data7 <- model_setup(case1 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
 model_data8 <- model_setup(case2 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
 
-model_data9 <- model_setup(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
+model_data9 <- model_setup(case1 ~ s(x) + s(x2) + poly(x,2,raw = TRUE) + poly(x2,3,raw=TRUE) + strata(id),sampledata,controlsmooth2)
 model_data10 <- model_setup(case2 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
 
 model_data11 <- model_setup(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth3)
@@ -98,6 +98,17 @@ opt_single_7_2 <- optimize_latentfield_trustoptim(c(-10,-10),model_data7,optcont
 
 opt_single_8_1 <- optimize_latentfield_trustoptim(c(0,0),model_data8,optcontrol = optcontrol)
 opt_single_8_2 <- optimize_latentfield_trustoptim(c(-10,-10),model_data8,optcontrol = optcontrol)
+
+opt_single_9_1 <- optimize_latentfield_trustoptim(c(0,0),model_data9,optcontrol = optcontrol)
+opt_single_9_2 <- optimize_latentfield_trustoptim(c(-10,-10),model_data9,optcontrol = optcontrol)
+
+opt_single_10_1 <- optimize_latentfield_trustoptim(c(0,0),model_data10,optcontrol = optcontrol)
+opt_single_10_2 <- optimize_latentfield_trustoptim(c(-10,-10),model_data10,optcontrol = optcontrol)
+
+opt_single_11_1 <- optimize_latentfield_trustoptim(c(0,0),model_data11,optcontrol = optcontrol)
+opt_single_11_2 <- optimize_latentfield_trustoptim(c(-10,-10),model_data11,optcontrol = optcontrol)
+
+
 file.remove("./tmpoutput07687")
 sink()
 
@@ -127,6 +138,13 @@ opt_6 <- optimize_all_thetas_parallel(thetagrid1,model_data6,optcontrol = optcon
 opt_7 <- optimize_all_thetas_parallel(thetagrid2,model_data7,optcontrol = optcontrol)
 
 opt_8 <- optimize_all_thetas_parallel(thetagrid2,model_data8,optcontrol = optcontrol)
+
+opt_9 <- optimize_all_thetas_parallel(thetagrid2,model_data9,optcontrol = optcontrol)
+
+opt_10 <- optimize_all_thetas_parallel(thetagrid2,model_data10,optcontrol = optcontrol)
+
+opt_11 <- optimize_all_thetas_parallel(thetagrid2,model_data11,optcontrol = optcontrol)
+
 file.remove("./tmpoutput07687")
 sink()
 
@@ -141,6 +159,9 @@ logpost5 <- add_log_posterior_values(opt_5,model_data5)
 logpost6 <- add_log_posterior_values(opt_6,model_data6)
 logpost7 <- add_log_posterior_values(opt_7,model_data7)
 logpost8 <- add_log_posterior_values(opt_8,model_data8)
+logpost9 <- add_log_posterior_values(opt_9,model_data9)
+logpost10 <- add_log_posterior_values(opt_10,model_data10)
+logpost11 <- add_log_posterior_values(opt_11,model_data11)
 
 
 
@@ -150,5 +171,6 @@ index3 <- get_indices(model_data3)
 index5 <- get_indices(model_data5)
 index7 <- get_indices(model_data7)
 index9 <- get_indices(model_data9)
+index11 <- get_indices(model_data11)
 
 

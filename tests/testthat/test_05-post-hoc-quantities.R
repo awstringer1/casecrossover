@@ -1,7 +1,7 @@
 context("Post-hoc")
 library(casecrossover)
 library(dplyr) # For tests
-source("prep-sample-data.R")
+# source("prep-sample-data.R")
 
 
 # Log-posterior of theta
@@ -48,6 +48,21 @@ test_that("Theta and sigma log-posteriors computed correctly",{
   expect_equal(logpost8$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost8$sigma[[1]]),logpost8$solution[[1]],model_data8))
   expect_equal(logpost8$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost8$sigma[[2]]),logpost8$solution[[2]],model_data8))
   expect_equal(logpost8$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost8$sigma[[3]]),logpost8$solution[[3]],model_data8))
+
+  expect_s3_class(logpost9,"tbl_df")
+  expect_equal(logpost9$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost9$sigma[[1]]),logpost9$solution[[1]],model_data9))
+  expect_equal(logpost9$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost9$sigma[[2]]),logpost9$solution[[2]],model_data9))
+  expect_equal(logpost9$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost9$sigma[[3]]),logpost9$solution[[3]],model_data9))
+
+  expect_s3_class(logpost10,"tbl_df")
+  expect_equal(logpost10$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost10$sigma[[1]]),logpost10$solution[[1]],model_data10))
+  expect_equal(logpost10$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost10$sigma[[2]]),logpost10$solution[[2]],model_data10))
+  expect_equal(logpost10$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost10$sigma[[3]]),logpost10$solution[[3]],model_data10))
+
+  expect_s3_class(logpost11,"tbl_df")
+  expect_equal(logpost11$sigma_logposterior[1],log_posterior_sigma(as.numeric(logpost11$sigma[[1]]),logpost11$solution[[1]],model_data11))
+  expect_equal(logpost11$sigma_logposterior[2],log_posterior_sigma(as.numeric(logpost11$sigma[[2]]),logpost11$solution[[2]],model_data11))
+  expect_equal(logpost11$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost11$sigma[[3]]),logpost11$solution[[3]],model_data11))
 })
 
 # Posterior normalization
@@ -73,6 +88,8 @@ test_that("Obtaining indices works as expected",{
   expect_s3_class(index3,"ccindex")
   expect_s3_class(index5,"ccindex")
   expect_s3_class(index7,"ccindex")
+  expect_s3_class(index9,"ccindex")
+  expect_s3_class(index11,"ccindex")
 
   expect_equal(index1$linear,c("x" = 4))
   expect_null(index1$smooth)
@@ -88,6 +105,9 @@ test_that("Obtaining indices works as expected",{
 
   expect_equal(index9$linear,c("x" = 11,"x" = 12,"x2" = 13,"x2" = 14,"x2" = 15))
   expect_equal(index9$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10))
+
+  expect_equal(index11$linear,c("x" = 11,"x" = 12,"x2" = 13,"x2" = 14,"x2" = 15))
+  expect_equal(index11$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10))
 })
 
 # Linear combinations
@@ -111,6 +131,14 @@ test_that("Making model linear combinations works as expected",{
   expect_equal(make_model_lincombs(model_data9)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,0,2^(1:3)))
   expect_equal(make_model_lincombs(model_data9)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
   expect_equal(make_model_lincombs(model_data9)[ ,7],c(0,0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
+
+  expect_equal(make_model_lincombs(model_data11)[ ,1],c(0,0,0,1,0,0,0,0,0,0,2^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data11)[ ,2],c(0,0,0,0,1,0,0,0,0,0,3^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data11)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0,0^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,0,1^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,0,2^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,7],c(0,0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
 })
 
 # Linear constraints

@@ -1,7 +1,7 @@
 context("Latent Variables - Priors and Posteriors")
 library(casecrossover)
 library(dplyr) # For tests
-source("prep-sample-data.R")
+# source("prep-sample-data.R")
 
 ### Q matrix functions ###
 
@@ -147,6 +147,12 @@ W72 <- c(rep(0,model_data7$Wd - 1),100000) # The last value, for beta, shouldn't
 W73 <- 1:model_data7$Wd # Nonzero parameter values
 W74 <- rnorm(model_data7$Wd) # Random values- ensure this is robust!
 
+W91 <- rep(0,model_data9$Wd)
+W92 <- c(rep(0,model_data9$Wd - 1),100000) # The last value, for beta, shouldn't affect the likelihood.
+W93 <- 1:model_data9$Wd # Nonzero parameter values
+W94 <- rnorm(model_data9$Wd) # Random values- ensure this is robust!
+
+
 
 Q11 <- Q_matrix(0,model_data1)
 Q12 <- Q_matrix(-5,model_data1)
@@ -162,6 +168,9 @@ Q52 <- Q_matrix(-5,model_data5)
 
 Q71 <- Q_matrix(c(0,0),model_data7)
 Q72 <- Q_matrix(c(-5,-5),model_data7)
+
+Q91 <- Q_matrix(c(0,0),model_data9)
+Q92 <- Q_matrix(c(-5,-5),model_data9)
 
 
 
@@ -223,6 +232,18 @@ test_that("Log-prior for W calculated correctly",{
   expect_equal(logprior_W(W72,model_data7,c(-5,-5)),as.numeric(-.5*t(W72)%*%Q72%*%W72))
   expect_equal(logprior_W(W73,model_data7,c(-5,-5)),as.numeric(-.5*t(W73)%*%Q72%*%W73))
   expect_equal(logprior_W(W74,model_data7,c(-5,-5)),as.numeric(-.5*t(W74)%*%Q72%*%W74))
+
+  # Model with two smooth terms and polynomials
+  expect_error(logprior_W(W91,model_data9,0)) # Only one theta
+  expect_equal(logprior_W(W91,model_data9,c(0,0)),0)
+  expect_equal(logprior_W(W92,model_data9,c(0,0)),as.numeric(-.5*t(W92)%*%Q91%*%W92))
+  expect_equal(logprior_W(W93,model_data9,c(0,0)),as.numeric(-.5*t(W93)%*%Q91%*%W93))
+  expect_equal(logprior_W(W94,model_data9,c(0,0)),as.numeric(-.5*t(W94)%*%Q91%*%W94))
+
+  expect_equal(logprior_W(W91,model_data9,c(-5,-5)),0)
+  expect_equal(logprior_W(W92,model_data9,c(-5,-5)),as.numeric(-.5*t(W92)%*%Q92%*%W92))
+  expect_equal(logprior_W(W93,model_data9,c(-5,-5)),as.numeric(-.5*t(W93)%*%Q92%*%W93))
+  expect_equal(logprior_W(W94,model_data9,c(-5,-5)),as.numeric(-.5*t(W94)%*%Q92%*%W94))
 })
 
 # Log posterior
@@ -239,24 +260,29 @@ test_that("Log posterior and gradient and hessian do not throw errros",{
   expect_equal(log_posterior_W(W31,0,model_data3),log_likelihood(W31,model_data3))
   expect_equal(log_posterior_W(W51,0,model_data5),log_likelihood(W51,model_data5))
   expect_equal(log_posterior_W(W71,c(0,0),model_data7),log_likelihood(W71,model_data7))
+  expect_equal(log_posterior_W(W91,c(0,0),model_data9),log_likelihood(W91,model_data9))
 
   expect_equal(grad_log_posterior_W(W11,0,model_data1),grad_log_likelihood(W11,model_data1))
   expect_equal(grad_log_posterior_W(W21,0,model_data2),grad_log_likelihood(W21,model_data2))
   expect_equal(grad_log_posterior_W(W31,0,model_data3),grad_log_likelihood(W31,model_data3))
   expect_equal(grad_log_posterior_W(W51,0,model_data5),grad_log_likelihood(W51,model_data5))
   expect_equal(grad_log_posterior_W(W71,c(0,0),model_data7),grad_log_likelihood(W71,model_data7))
+  expect_equal(grad_log_posterior_W(W91,c(0,0),model_data9),grad_log_likelihood(W91,model_data9))
 
   expect_equal(hessian_log_posterior_W(W11,0,model_data = model_data1),-(Q_matrix(0,model_data1) + hessian_log_likelihood(W11,model_data1)))
   expect_equal(hessian_log_posterior_W(W21,0,model_data = model_data2),-(Q_matrix(0,model_data2) + hessian_log_likelihood(W21,model_data2)))
   expect_equal(hessian_log_posterior_W(W31,0,model_data = model_data3),-(Q_matrix(0,model_data3) + hessian_log_likelihood(W31,model_data3)))
   expect_equal(hessian_log_posterior_W(W51,0,model_data = model_data5),-(Q_matrix(0,model_data5) + hessian_log_likelihood(W51,model_data5)))
   expect_equal(hessian_log_posterior_W(W71,c(0,0),model_data = model_data7),-(Q_matrix(c(0,0),model_data7) + hessian_log_likelihood(W71,model_data7)))
+  expect_equal(hessian_log_posterior_W(W91,c(0,0),model_data = model_data9),-(Q_matrix(c(0,0),model_data9) + hessian_log_likelihood(W91,model_data9)))
 
   expect_s4_class(hessian_log_posterior_W(W11,0,model_data = model_data1),'CsparseMatrix')
   expect_s4_class(hessian_log_posterior_W(W21,0,model_data = model_data2),'CsparseMatrix')
   expect_s4_class(hessian_log_posterior_W(W31,0,model_data = model_data3),'CsparseMatrix')
   expect_s4_class(hessian_log_posterior_W(W51,0,model_data = model_data5),'CsparseMatrix')
   expect_s4_class(hessian_log_posterior_W(W71,c(0,0),model_data = model_data7),'CsparseMatrix')
+  expect_s4_class(hessian_log_posterior_W(W91,c(0,0),model_data = model_data9),'CsparseMatrix')
+
 })
 
 # Log-posterior for theta. Will recreate (inefficiently) using the mvtnorm::dmvnorm() function.
@@ -322,6 +348,16 @@ test_that("Log posterior for theta is computed correctly",{
   expect_equal(log_posterior_theta(c(-5,-5),W73,model_data7),lpt_inefficient(c(-5,-5),W73,model_data7))
   expect_equal(log_posterior_theta(c(0,0),W74,model_data7),lpt_inefficient(c(0,0),W74,model_data7))
   expect_equal(log_posterior_theta(c(-5,-5),W74,model_data7),lpt_inefficient(c(-5,-5),W74,model_data7))
+
+  expect_equal(log_posterior_theta(c(0,0),W91,model_data9),lpt_inefficient(c(0,0),W91,model_data9))
+  expect_equal(log_posterior_theta(c(-5,-5),W91,model_data9),lpt_inefficient(c(-5,-5),W91,model_data9))
+  expect_equal(log_posterior_theta(c(0,0),W92,model_data9),lpt_inefficient(c(0,0),W92,model_data9))
+  expect_equal(log_posterior_theta(c(-5,-5),W92,model_data9),lpt_inefficient(c(-5,-5),W92,model_data9))
+  expect_equal(log_posterior_theta(c(0,0),W93,model_data9),lpt_inefficient(c(0,0),W93,model_data9))
+  expect_equal(log_posterior_theta(c(-5,-5),W93,model_data9),lpt_inefficient(c(-5,-5),W93,model_data9))
+  expect_equal(log_posterior_theta(c(0,0),W94,model_data9),lpt_inefficient(c(0,0),W94,model_data9))
+  expect_equal(log_posterior_theta(c(-5,-5),W94,model_data9),lpt_inefficient(c(-5,-5),W94,model_data9))
+
 })
 
 

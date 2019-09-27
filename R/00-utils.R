@@ -164,5 +164,67 @@ prior_calls <- list(
   pc.prec = pcprec
 )
 
+# INTERNAL: functions for numerical integration of log-posterior
+normalize_log_posterior_single <- function(pp,tt) {
+  df <- dplyr::tibble(pp = pp,tt = tt) %>% dplyr::arrange(tt)
+  tt <- df$tt
+  pp <- df$pp
+
+  lp <- length(pp)
+  matrixStats::logSumExp(c(
+    matrixStats::logSumExp(pp[-1] + log(diff(tt)) + log(1/2)),
+    matrixStats::logSumExp(pp[-lp] + log(diff(tt)) + log(1/2))
+  ))
+}
+
+normalize_log_posterior_multiple <- function(pp,tt) {
+  # Multidimensional quadrature
+  # Only works for evenly-spaced grids
+
+  # Check the grid is uniform
+
+  # Compute the grid of points and function values
+  grd <- tt %>%
+    purrr::transpose() %>%
+    purrr::map(~purrr::reduce(.x,c)) %>%
+    expand.grid() %>%
+    unique()
+  # Add the function values
+  grd$logfval <- pp
+
+  # Compute the weights. Above, I used the trick of adding the thing
+  # together twice but excluding the first/last observation
+  # Here I just have to divide the endpoints by 2
+  divide_endpoints_by_2_log <- function(x) {
+    # I.e. add log(1/2) to the endpoints, and replicate the first endpoint
+    lx <- length(x)
+    if (lx == 1) return(c(x + log(1/2),x))
+    c(x[1] + log(1/2),x[1:(lx-1)],x[lx] + log(1/2))
+  }
+  ww <- grd %>%
+    dplyr::select(-.data[["logfval"]]) %>%
+    purrr::map(unique) %>%
+    purrr::map(sort) %>%
+    purrr::map(diff) %>%
+    purrr::map(log) %>%
+    purrr::map(divide_endpoints_by_2_log) %>%
+    purrr::map(sum)
+
+
+
+
+
+
+
+
+}
+
+f <- function(x) sum(x^2)
+
+
+
+
+
+
 
 

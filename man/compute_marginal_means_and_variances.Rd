@@ -20,7 +20,8 @@ terms you want means/variances for.}
 like to compute means/variances, or NULL. If NULL, any linear constraints will be pulled from model_data.}
 
 \item{lincomb}{Either a sparse matrix whose columns contain linear combinations of the latent variables
-whose means/variances you would like to compute, or an object of class cclincomb output by make_model_lincombs()}
+whose means/variances you would like to compute, or an object of class cclincomb output by make_model_lincombs().
+If NULL, will be computed automatically. Set lincomb = FALSE in order to prevent this.}
 }
 \description{
 Given optimization results with log posteriors computed, compute the

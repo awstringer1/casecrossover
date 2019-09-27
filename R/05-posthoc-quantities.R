@@ -36,6 +36,9 @@ add_log_posterior_values <- function(optresults,model_data) {
 #' this function accepts grid points and LOGGED function values and computes the integral in
 #' a numerically stable manner, using matrixStats::logSumExp().
 #'
+#' For a single hyperparameter, the function works on uniform and non-uniform grids. For
+#' a multidimensional hyperparameter, the function only works on a uniform grid (in all dimensions).
+#'
 #' @param pp logged function values
 #' @param tt grid points at which these function values were computed
 #'
@@ -46,19 +49,27 @@ add_log_posterior_values <- function(optresults,model_data) {
 #'
 normalize_log_posterior <- function(pp,tt) {
   # pp: log posterior
-  # tt: theta values at which pp is evaluated
+  # tt: theta values at which pp is evaluated. Vector (if single dimension) or list of vectors.
   # function returns the LOG of the normalizing constant
 
   # Make sure tt is sorted
-  df <- dplyr::tibble(pp = pp,tt = tt) %>% dplyr::arrange(tt)
-  tt <- df$tt
-  pp <- df$pp
-
-  lp <- length(pp)
-  matrixStats::logSumExp(c(
-    matrixStats::logSumExp(pp[-1] + log(diff(tt)) + log(1/2)),
-    matrixStats::logSumExp(pp[-lp] + log(diff(tt)) + log(1/2))
-  ))
+  if (is.numeric(tt)) {
+    val <- normalize_log_posterior_single(pp,tt)
+    return(val)
+  } else if (is.list(tt)) {
+    # Product rule: compute the weights for each dimension, then take the product.
+    # Compute (log) weights
+    # ww <- tt %>%
+    #   purrr::transpose() %>%
+    #   purrr::map(~purrr::reduce(.x,c)) %>%
+    #   purrr::map(sort) %>%
+    #   purrr::map(~log(diff(.x)) + log(1/2)) %>%
+    #   purrr::transpose() %>%
+    #   purrr::map(~purrr::reduce(.x,`*`)) %>%
+    #   purrr::reduce(c)
+  } else {
+    stop("tt values must either be numeric or list.")
+  }
 }
 
 #' Helper function to return the correct indices for latent variables
@@ -303,12 +314,53 @@ make_linear_constraints <- function(model_data) {
 #' @param constrA Either a sparse matrix whose columns contain linear constraints under which you would
 #' like to compute means/variances, or NULL. If NULL, any linear constraints will be pulled from model_data.
 #' @param lincomb Either a sparse matrix whose columns contain linear combinations of the latent variables
-#' whose means/variances you would like to compute, or an object of class cclincomb output by make_model_lincombs()
+#' whose means/variances you would like to compute, or an object of class cclincomb output by make_model_lincombs().
+#' If NULL, will be computed automatically. Set lincomb = FALSE in order to prevent this.
 #'
 #' @export
 #'
 
+# i <- index11
+# model_results <- opt_11
+# model_data <- model_data11
+
 compute_marginal_means_and_variances <- function(i,model_results,model_data,constrA = NULL,lincomb = NULL) {
+  # If a ccindex object provided, change to numeric
+  if (class(i) == "ccindex") {
+    idx <- c(i$smooth,i$linear)
+  } else if (is.numeric(i)) {
+    idx <- i
+  } else {
+    stop(stringr::str_c("i must be an object of class ccindex, or a numeric vector. You provided an object of class ",class(i)))
+  }
+
+  # Pull constraints from model_data
+  if (is.null(constrA)) {
+    # Check if model has any linear constraints
+    if (!is.null(model_data$control$linear_constraints)) {
+      if (length(model_data$control$linear_constraints) > 0) {
+        constrA <- make_linear_constraints(model_data)
+      }
+    }
+  }
+
+  # Pull linear combinations from model data
+  if (is.null(lincomb)) {
+    # Check if the model has both linear and smooth terms for the SAME covariate
+    if (length(intersect(model_data$model_elements$smooth,model_data$model_elements$linear)) > 0) {
+      lincomb <- make_model_lincombs(model_data)
+    }
+  } else if (is.logical(lincomb)) {
+    # If lincomb set to FALSE, nullify it now
+    if (!lincomb) lincomb <- NULL
+  } else {
+    if (!inherits(lincomb,"sparseMatrix")) {
+      stop("lincomb must either be NULL, logical, or an object inheriting from sparseMatrix")
+    }
+  }
+
+  # Function can take a tibble with only a single row, representing the "eb" setting from INLA.
+  # This is mostly to accommodate models with only linear terms.
   if (nrow(model_results) > 1) {
     # Add log posterior values for theta if not present
     if (!("theta_logposterior" %in% names(model_results))) {

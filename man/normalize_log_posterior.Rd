@@ -19,4 +19,7 @@ This is the log-normalizing constant.
 Simple implementation of the trapezoid rule for integration. The key is that
 this function accepts grid points and LOGGED function values and computes the integral in
 a numerically stable manner, using matrixStats::logSumExp().
+
+For a single hyperparameter, the function works on uniform and non-uniform grids. For
+a multidimensional hyperparameter, the function only works on a uniform grid (in all dimensions).
 }

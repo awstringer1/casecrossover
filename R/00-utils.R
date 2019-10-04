@@ -180,6 +180,7 @@ normalize_log_posterior_single <- function(pp,tt) {
 normalize_log_posterior_multiple <- function(pp,tt) {
   # Multidimensional quadrature
   # Only works for evenly-spaced grids
+  K <- length(tt[[1]]) # Dimension of integration
 
   # Check the grid is uniform
 
@@ -189,8 +190,6 @@ normalize_log_posterior_multiple <- function(pp,tt) {
     purrr::map(~purrr::reduce(.x,c)) %>%
     expand.grid() %>%
     unique()
-  # Add the function values
-  grd$logfval <- pp
 
   # Compute the weights. Above, I used the trick of adding the thing
   # together twice but excluding the first/last observation
@@ -202,25 +201,32 @@ normalize_log_posterior_multiple <- function(pp,tt) {
     c(x[1] + log(1/2),x[1:(lx-1)],x[lx] + log(1/2))
   }
   ww <- grd %>%
-    dplyr::select(-.data[["logfval"]]) %>%
     purrr::map(unique) %>%
     purrr::map(sort) %>%
     purrr::map(diff) %>%
     purrr::map(log) %>%
     purrr::map(divide_endpoints_by_2_log) %>%
-    purrr::map(sum)
+    purrr::transpose() %>%
+    purrr::map(~purrr::reduce(.x,c)) %>%
+    purrr::transpose() %>%
+    purrr::map(~purrr::reduce(.x,c)) %>%
+    expand.grid() %>%
+    dplyr::rowwise() %>%
+    apply(1,sum)
 
-
-
-
-
-
-
-
+  sum(ww + pp)
 }
 
-f <- function(x) sum(x^2)
+f <- function(x,y) x^2 + y^2
+intf <- function(a,b) 1/3*sum(b^3 - a^3)
 
+ttg <- expand.grid(seq(0,2,by=.1),seq(0,2,by=.1))
+pp <- ttg %>% rowwise() %>% mutate(fx = f(Var1,Var2)) %>% pull(fx)
+tt <- list()
+for (i in 1:nrow(ttg)) tt[[i]] <- as.numeric(ttg[i, ])
+
+normalize_log_posterior_multiple(pp,tt)
+intf(c(0,0),c(2,2))
 
 
 

@@ -100,8 +100,8 @@ for (i in 1:nrow(ttg2)) {
 }
 
 test_that("Normalizing the posterior works as expected, multiple dimensions",{
-  expect_equal(round(normalize_log_posterior_multiple(pp1,tt1),1),0)
-  expect_equal(round(normalize_log_posterior_multiple(pp2,tt2),1),0)
+  expect_equal(round(normalize_log_posterior(pp1,tt1),1),0)
+  expect_equal(round(normalize_log_posterior(pp2,tt2),1),0)
 })
 
 # Obtaining the correct indices for model terms

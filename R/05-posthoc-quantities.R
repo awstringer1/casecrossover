@@ -57,16 +57,8 @@ normalize_log_posterior <- function(pp,tt) {
     val <- normalize_log_posterior_single(pp,tt)
     return(val)
   } else if (is.list(tt)) {
-    # Product rule: compute the weights for each dimension, then take the product.
-    # Compute (log) weights
-    # ww <- tt %>%
-    #   purrr::transpose() %>%
-    #   purrr::map(~purrr::reduce(.x,c)) %>%
-    #   purrr::map(sort) %>%
-    #   purrr::map(~log(diff(.x)) + log(1/2)) %>%
-    #   purrr::transpose() %>%
-    #   purrr::map(~purrr::reduce(.x,`*`)) %>%
-    #   purrr::reduce(c)
+    val <- normalize_log_posterior_multiple(pp,tt)
+    return(val)
   } else {
     stop("tt values must either be numeric or list.")
   }
@@ -222,10 +214,9 @@ make_model_lincombs <- function(model_data) {
     }
   }
 
-  # Note: not the fastest way to do this. See stackoverflow:
+  # Note: the following is not the fastest way to do this. See stackoverflow:
   # https://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors#8844057
   # It's about 2x - 3x faster in benchmarking; not worth introducing new code.
-
   lincomblist %>%
     purrr::map(~as(.,"sparseMatrix")) %>%
     purrr::reduce(cbind)
@@ -283,20 +274,6 @@ make_linear_constraints <- function(model_data) {
 }
 
 
-# Create a matrix of linear combinations corresponding to the elements of u
-# The middle element, where U = 0, should still have a variance, due to beta
-# uu <- sort(unique(model_data$A$exposure$u))
-# ii <- c(
-#   1:(model_data$vectorofcolumnstoremove - 1),
-#   0,
-#   (model_data$vectorofcolumnstoremove:(RW2BINS-1))
-# )
-#
-#
-# lincomb <- purrr::map2(uu,ii,
-#                        ~create_single_lincomb(.x,.y,POLYNOMIAL_DEGREE)) %>%
-#   purrr::reduce(cbind)
-
 #' Compute marginal means and variances
 #'
 #' @description Given optimization results with log posteriors computed, compute the
@@ -320,9 +297,9 @@ make_linear_constraints <- function(model_data) {
 #' @export
 #'
 
-# i <- index11
-# model_results <- opt_11
-# model_data <- model_data11
+i <- index11
+model_results <- opt_11
+model_data <- model_data11
 
 compute_marginal_means_and_variances <- function(i,model_results,model_data,constrA = NULL,lincomb = NULL) {
   # If a ccindex object provided, change to numeric
@@ -333,6 +310,8 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
   } else {
     stop(stringr::str_c("i must be an object of class ccindex, or a numeric vector. You provided an object of class ",class(i)))
   }
+  idx <- unname(idx)
+
 
   # Pull constraints from model_data
   if (is.null(constrA)) {
@@ -341,6 +320,13 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
       if (length(model_data$control$linear_constraints) > 0) {
         constrA <- make_linear_constraints(model_data)
       }
+    }
+  } else if (!constrA) {
+    # If constrA is FALSE, nullify it now
+    constrA <- NULL
+  } else {
+    if (!inherits(constrA,"sparseMatrix")) {
+      stop("constrA must either be NULL, logical, or an object inheriting from sparseMatrix")
     }
   }
 
@@ -369,14 +355,18 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
     # Normalize
     thetanormconst <- normalize_log_posterior(model_results$theta_logposterior,model_results$theta)
     model_results$theta_logposterior <- model_results$theta_logposterior - thetanormconst
+    # Note that doing this still leaves sigma_logposterior unnormalized! But it's not used in this function.
+
     # Get the integration weights
-    dx1 <- diff(model_results$theta) # dx1[i] = x[i+1] - x[i]
-    ld <- length(dx1)
-    intweights <- c(
-      dx1[1]/2,
-      (dx1[1:(ld-1)] + dx1[2:ld])/2,
-      dx1[ld]/2
-    )
+    # UPDATE: I don't think these are used, lemme check the bottom (they shouldn't be used since theta_logposterior is normalized).
+    # TODO: check the bottom to make sure they aren't used.
+    # dx1 <- diff(model_results$theta) # dx1[i] = x[i+1] - x[i]
+    # ld <- length(dx1)
+    # intweights <- c(
+    #   dx1[1]/2,
+    #   (dx1[1:(ld-1)] + dx1[2:ld])/2,
+    #   dx1[ld]/2
+    # )
   }
 
   # Compute the precision matrices for each theta
@@ -466,7 +456,7 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
     # Re-compute the hessians
     corrected_hessians <- model_results %>%
       purrr::pmap(~list(
-        C = hessian_log_likelihood(W = ..12,model_data = model_data,structure = hessian_structure),
+        C = hessian_log_likelihood(W = ..10,model_data = model_data,structure = hessian_structure),
         theta = ..1)
       )
     # Get the corrected precision matrix of the GMRF- Q + C_correct

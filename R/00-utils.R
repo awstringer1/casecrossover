@@ -180,53 +180,26 @@ normalize_log_posterior_single <- function(pp,tt) {
 normalize_log_posterior_multiple <- function(pp,tt) {
   # Multidimensional quadrature
   # Only works for evenly-spaced grids
+  M <- length(tt) # Number of grid points
   K <- length(tt[[1]]) # Dimension of integration
 
-  # Check the grid is uniform
-
-  # Compute the grid of points and function values
-  grd <- tt %>%
-    purrr::transpose() %>%
-    purrr::map(~purrr::reduce(.x,c)) %>%
-    expand.grid() %>%
-    unique()
-
-  # Compute the weights. Above, I used the trick of adding the thing
-  # together twice but excluding the first/last observation
-  # Here I just have to divide the endpoints by 2
-  divide_endpoints_by_2_log <- function(x) {
-    # I.e. add log(1/2) to the endpoints, and replicate the first endpoint
-    lx <- length(x)
-    if (lx == 1) return(c(x + log(1/2),x))
-    c(x[1] + log(1/2),x[1:(lx-1)],x[lx] + log(1/2))
-  }
-  ww <- grd %>%
-    purrr::map(unique) %>%
-    purrr::map(sort) %>%
-    purrr::map(diff) %>%
-    purrr::map(log) %>%
-    purrr::map(divide_endpoints_by_2_log) %>%
-    purrr::transpose() %>%
-    purrr::map(~purrr::reduce(.x,c)) %>%
-    purrr::transpose() %>%
-    purrr::map(~purrr::reduce(.x,c)) %>%
-    expand.grid() %>%
-    dplyr::rowwise() %>%
-    apply(1,sum)
-
-  sum(ww + pp)
+  # This only works for uniform grids:
+  df <- tt[[2]][1] - tt[[1]][1]
+  ww <- log(df) + c(log(1/2),rep(0,M-2),log(1/2))
+  matrixStats::logSumExp(K*ww + pp)
 }
 
-f <- function(x,y) x^2 + y^2
-intf <- function(a,b) 1/3*sum(b^3 - a^3)
+# f <- function(x,y,z) mvtnorm::dmvnorm(x = c(x,y,z),log = TRUE)
+#
+# ttg <- expand.grid(seq(-5,5,by=.5),seq(-5,5,by=.5),seq(-5,5,by=.5))
+# pp <- ttg %>% rowwise() %>% mutate(fx = f(Var1,Var2,Var3)) %>% pull(fx)
+# tt <- list()
+# for (i in 1:nrow(ttg)) {
+#   tt[[i]] <- as.numeric(ttg[i, ])
+# }
+#
+# normalize_log_posterior_multiple(pp,tt) # Should be zero, i.e. log(1)
 
-ttg <- expand.grid(seq(0,2,by=.1),seq(0,2,by=.1))
-pp <- ttg %>% rowwise() %>% mutate(fx = f(Var1,Var2)) %>% pull(fx)
-tt <- list()
-for (i in 1:nrow(ttg)) tt[[i]] <- as.numeric(ttg[i, ])
-
-normalize_log_posterior_multiple(pp,tt)
-intf(c(0,0),c(2,2))
 
 
 

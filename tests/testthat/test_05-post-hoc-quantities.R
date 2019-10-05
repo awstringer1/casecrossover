@@ -82,6 +82,28 @@ test_that("Normalizing the posterior works as expected",{
   expect_equal(round(normalize_log_posterior(dbeta(x3,.5,1,log=TRUE),x3),1),0)
 })
 
+f1 <- function(x,y,z) mvtnorm::dmvnorm(x = c(x,y,z),log = TRUE)
+f2 <- function(x,y) dgamma(x,2,3,log=TRUE) + dgamma(y,3,2,log=TRUE)
+
+ttg1 <- expand.grid(seq(-5,5,by=.5),seq(-5,5,by=.5),seq(-5,5,by=.5))
+pp1 <- ttg1 %>% rowwise() %>% mutate(fx = f1(Var1,Var2,Var3)) %>% pull(fx)
+tt1 <- list()
+for (i in 1:nrow(ttg1)) {
+  tt1[[i]] <- as.numeric(ttg1[i, ])
+}
+
+ttg2 <- expand.grid(seq(0,5,by=.1),seq(0,5,by=.1))
+pp2 <- ttg2 %>% rowwise() %>% mutate(fx = f2(Var1,Var2)) %>% pull(fx)
+tt2 <- list()
+for (i in 1:nrow(ttg2)) {
+  tt2[[i]] <- as.numeric(ttg2[i, ])
+}
+
+test_that("Normalizing the posterior works as expected, multiple dimensions",{
+  expect_equal(round(normalize_log_posterior_multiple(pp1,tt1),1),0)
+  expect_equal(round(normalize_log_posterior_multiple(pp2,tt2),1),0)
+})
+
 # Obtaining the correct indices for model terms
 test_that("Obtaining indices works as expected",{
   expect_s3_class(index1,"ccindex")

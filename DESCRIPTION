@@ -32,5 +32,6 @@ Suggests:
     knitr,
     rmarkdown,
     testthat,
-    parallel
+    parallel,
+    mvtnorm
 VignetteBuilder: knitr

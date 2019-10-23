@@ -24,7 +24,7 @@ and while it's still totally possible to use a sum-to-zero constraint, it become
 to interpret it.
 
 The function returns a named list of sparseVectors suitable for input into cc_control(). Specifically, the list items
-containå the sorted unique values of your covariate, the index of the zero value(s), the name of the variable,
+contain the sorted unique values of your covariate, the index of the zero value(s), the name of the variable,
 and a list of sparseVector(s) implementing the constraint(s).
 }
 \examples{

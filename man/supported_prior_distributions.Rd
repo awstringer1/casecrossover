@@ -7,7 +7,7 @@
 supported_prior_distributions(nm = "")
 }
 \arguments{
-\item{nm}{Optional; if you know the name of the}
+\item{nm}{Optional; if you know the name of the prior you want, specify it.}
 }
 \description{
 This function returns a list of all supported prior distributions,

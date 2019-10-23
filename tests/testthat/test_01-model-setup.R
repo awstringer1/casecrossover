@@ -118,7 +118,7 @@ test_that("Model data created correctly",{
   expect_equal(ncol(model_data3$A$x$Ad),3)
   expect_equal(nrow(model_data3$A$x$Ad),3)
   expect_length(model_data3$model_elements$linear,0)
-  expect_equal(model_data3$vectorofcolumnstoremove,1)
+  expect_equal(model_data3$vectorofcolumnstoremove,c("x" = 1))
 
   # Check that creating smooth and linear terms with the same variable works
   expect_equal(model_data5$p,1)
@@ -138,13 +138,13 @@ test_that("Model data created correctly",{
   expect_equal(nrow(model_data5$A$x$A),5)
   expect_equal(ncol(model_data5$A$x$Ad),3)
   expect_equal(nrow(model_data5$A$x$Ad),3)
-  expect_equal(model_data5$vectorofcolumnstoremove,1)
+  expect_equal(model_data5$vectorofcolumnstoremove,c("x" = 1))
 
   # Check that multiple smooth terms work
   expect_equal(model_data7$p,0)
   expect_null(model_data7$X)
 
-  expect_equal(model_data7$M,7)
+  expect_equal(model_data7$M,6)
   expect_equal(names(model_data7$A),c("x","x2"))
   expect_length(model_data7$A,2)
   expect_s4_class(model_data7$A$x$A,"CsparseMatrix")
@@ -160,7 +160,7 @@ test_that("Model data created correctly",{
   expect_equal(ncol(model_data7$A$x2$Ad),5)
   expect_equal(nrow(model_data7$A$x2$Ad),3)
 
-  expect_equal(model_data7$vectorofcolumnstoremove,1)
+  expect_equal(model_data7$vectorofcolumnstoremove,c("x" = 1,"x2" = 6))
 
   # Check that multiple smooth terms with polynomials works
   expect_equal(model_data9$p,5)
@@ -171,7 +171,7 @@ test_that("Model data created correctly",{
   expect_s4_class(model_data9$X,"CsparseMatrix")
   expect_s4_class(model_data9$Xd,"CsparseMatrix")
 
-  expect_equal(model_data9$M,7)
+  expect_equal(model_data9$M,6)
   expect_equal(names(model_data9$A),c("x","x2"))
   expect_length(model_data9$A,2)
   expect_s4_class(model_data9$A$x$A,"CsparseMatrix")
@@ -187,7 +187,7 @@ test_that("Model data created correctly",{
   expect_equal(ncol(model_data9$A$x2$Ad),5)
   expect_equal(nrow(model_data9$A$x2$Ad),3)
 
-  expect_equal(model_data9$vectorofcolumnstoremove,1)
+  expect_equal(model_data9$vectorofcolumnstoremove,c("x" = 1,"x2" = 6))
 
   # Check control days and case days correctly recorded
   expect_equal(model_data1$control_days,c("1" = 2,"2" = 1))
@@ -294,8 +294,6 @@ test_that("Model data created correctly",{
   # Linear constraints
   expect_warning(model_setup(case1 ~ s(x) + strata(id),sampledata,control = cc_control(smooth_prior = list(pc_prior(3,.75))))) # Smooth terms but no constraints.
   expect_null(model_data1$vectorofcolumnstoremove)
-  expect_equal(model_data3$vectorofcolumnstoremove,1)
-  expect_equal(model_data7$vectorofcolumnstoremove,1)
 })
 
 

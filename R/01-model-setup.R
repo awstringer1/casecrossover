@@ -63,7 +63,7 @@ cc_control <- function(...) {
 #' @description This function returns a list of all supported prior distributions,
 #' including their names, parameters, and actual function call.
 #'
-#' @param nm Optional; if you know the name of the
+#' @param nm Optional; if you know the name of the prior you want, specify it.
 #' @examples
 #' supported_prior_distributions()
 #' supported_prior_distributions("pc.prec")
@@ -233,7 +233,7 @@ fortify_priors <- function(priorlist) {
 #' to interpret it.
 #'
 #' The function returns a named list of sparseVectors suitable for input into cc_control(). Specifically, the list items
-#' containå the sorted unique values of your covariate, the index of the zero value(s), the name of the variable,
+#' contain the sorted unique values of your covariate, the index of the zero value(s), the name of the variable,
 #' and a list of sparseVector(s) implementing the constraint(s).
 #'
 #' @param u Covariate vector. You can pass it in raw (like data$u) or as a sorted vector of unique values.
@@ -447,7 +447,7 @@ model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
   model_data$Ne <- model_data$Nd + model_data$n
 
   # Priors.
-  # Currently only pc prec prior is implemented.
+  # Currently only pc.prec prior is implemented.
   # Prior u is P(sigma > u) = alpha.
 
   if (length(control$smooth_prior) != length(model_elements$smooth)) stop(stringr::str_c(length(control$smooth_prior)," priors provided for ",length(model_elements$smooth)," hyperparameters."))
@@ -483,15 +483,29 @@ model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
   # model_data$vectorofcolumnstoremove element.
   #
   # UPDATE: actually, I don't think you need to take one from each. Just take the first one.
+  # UPDATE AGAIN: nope, that was wishful thinking. I knew in my heart that this wasn't true :(
+  # Now I gotta do it for each variable.
   if (length(model_elements$smooth) > 0) {
     if (length(control$linear_constraints) != length(model_elements$smooth)) {
       warning("Smooth terms, but no linear constraints, specified. You should add one or more constraints. See create_linear_constraints().")
     } else {
-      # Take the first one and use it to set one to zero
-      nm <- model_elements$smooth[1]
-      model_data$vectorofcolumnstoremove <- control$linear_constraints[[nm]]$whichzero[1]
+      # For each smooth term with a constraint, Take the first one and use it to set one to zer
+      k <- 0
+      s <- 1
+      model_data$vectorofcolumnstoremove <- numeric()
+      names(model_data$vectorofcolumnstoremove) <- character()
+      for (nm in model_elements$smooth) {
+        whichzero <- which(control$linear_constraints[[nm]]$whichzero[1] == control$linear_constraints[[nm]]$u)
+        model_data$vectorofcolumnstoremove <- c(model_data$vectorofcolumnstoremove,whichzero + k)
+        k <- k + length(control$linear_constraints[[nm]]$u)
+        model_data$M <- model_data$M - 1
+        names(model_data$vectorofcolumnstoremove)[s] <- nm
+        s <- s + 1
+      }
+      # nm <- model_elements$smooth[1]
+      # model_data$vectorofcolumnstoremove <- control$linear_constraints[[nm]]$whichzero[1]
       # Adjust M
-      model_data$M <- model_data$M - 1
+      # model_data$M <- model_data$M - 1
       # Remove this constraint from the list of constraints
       # ACTUALLY: do I have to...? If I add it back in later I don't think it matters. We'll see.
     }

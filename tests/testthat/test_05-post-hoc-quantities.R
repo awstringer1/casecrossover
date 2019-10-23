@@ -123,13 +123,13 @@ test_that("Obtaining indices works as expected",{
   expect_equal(index5$smooth,c("x" = 4,"x" = 5))
 
   expect_null(index7$linear)
-  expect_equal(index7$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10))
+  expect_equal(index7$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9))
 
-  expect_equal(index9$linear,c("x" = 11,"x" = 12,"x2" = 13,"x2" = 14,"x2" = 15))
-  expect_equal(index9$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10))
+  expect_equal(index9$linear,c("x" = 10,"x" = 11,"x2" = 12,"x2" = 13,"x2" = 14))
+  expect_equal(index9$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9))
 
-  expect_equal(index11$linear,c("x" = 11,"x" = 12,"x2" = 13,"x2" = 14,"x2" = 15))
-  expect_equal(index11$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10))
+  expect_equal(index11$linear,c("x" = 10,"x" = 11,"x2" = 12,"x2" = 13,"x2" = 14))
+  expect_equal(index11$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9))
 })
 
 # Linear combinations
@@ -146,21 +146,19 @@ test_that("Making model linear combinations works as expected",{
   expect_equal(make_model_lincombs(model_data5)[ ,1],c(0,0,0,1,0,2))
   expect_equal(make_model_lincombs(model_data5)[ ,2],c(0,0,0,0,1,3))
 
-  expect_equal(make_model_lincombs(model_data9)[ ,1],c(0,0,0,1,0,0,0,0,0,0,2^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data9)[ ,2],c(0,0,0,0,1,0,0,0,0,0,3^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data9)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0,0^(1:3)))
-  expect_equal(make_model_lincombs(model_data9)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,0,1^(1:3)))
-  expect_equal(make_model_lincombs(model_data9)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,0,2^(1:3)))
-  expect_equal(make_model_lincombs(model_data9)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
-  expect_equal(make_model_lincombs(model_data9)[ ,7],c(0,0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,1],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data9)[ ,2],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data9)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
 
-  expect_equal(make_model_lincombs(model_data11)[ ,1],c(0,0,0,1,0,0,0,0,0,0,2^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data11)[ ,2],c(0,0,0,0,1,0,0,0,0,0,3^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data11)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0,0^(1:3)))
-  expect_equal(make_model_lincombs(model_data11)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,0,1^(1:3)))
-  expect_equal(make_model_lincombs(model_data11)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,0,2^(1:3)))
-  expect_equal(make_model_lincombs(model_data11)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
-  expect_equal(make_model_lincombs(model_data11)[ ,7],c(0,0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,1],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data11)[ ,2],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data11)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
 })
 
 # Linear constraints
@@ -168,20 +166,12 @@ test_that("Linear constraints are converted to matrix format correctly",{
   expect_error(make_linear_constraints(model_data1))
   expect_equal(make_linear_constraints(model_data3),0)
   expect_equal(make_linear_constraints(model_data5),0)
+  expect_equal(make_linear_constraints(model_data7),0)
+  expect_equal(make_linear_constraints(model_data9),0)
 
-  expect_equal(make_linear_constraints(model_data7)@x,1)
-  expect_equal(make_linear_constraints(model_data7)@i,7) # 0-based row index
-  expect_equal(make_linear_constraints(model_data7)@j,0) # 0-based column index
-  expect_equal(make_linear_constraints(model_data7)@Dim,c(model_data7$Wd,1))
-
-  expect_equal(make_linear_constraints(model_data9)@x,1)
-  expect_equal(make_linear_constraints(model_data9)@i,7)
-  expect_equal(make_linear_constraints(model_data9)@j,0)
-  expect_equal(make_linear_constraints(model_data9)@Dim,c(model_data9$Wd,1))
-
-  expect_equal(make_linear_constraints(model_data11)@x,c(1,1))
-  expect_equal(make_linear_constraints(model_data11)@i,c(7,8))
-  expect_equal(make_linear_constraints(model_data11)@j,c(0,1))
-  expect_equal(make_linear_constraints(model_data11)@Dim,c(model_data11$Wd,2))
+  expect_equal(make_linear_constraints(model_data11)@x,1)
+  expect_equal(make_linear_constraints(model_data11)@i,7) # Row and column indices are 0-based
+  expect_equal(make_linear_constraints(model_data11)@j,0)
+  expect_equal(make_linear_constraints(model_data11)@Dim,c(model_data11$Wd,1))
 })
 

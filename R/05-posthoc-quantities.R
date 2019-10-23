@@ -107,14 +107,20 @@ get_indices <- function(model_data) {
     numtermsvec <- purrr::reduce(numterms,c)
     names(numtermsvec) <- names(numterms)
     if (!is.null(model_data$vectorofcolumnstoremove)) {
-      if (model_data$vectorofcolumnstoremove != 0) {
-        numtermsvec[1] <- numtermsvec[1] - 1
-        covvalues[[1]] <- covvalues[[1]][-model_data$vectorofcolumnstoremove]
+      if (all(model_data$vectorofcolumnstoremove == 0)) {
+        # Do nothing
+      } else {
+        for (vr in names(model_data$vectorofcolumnstoremove)) {
+          numtermsvec[vr] <- numtermsvec[vr] - 1
+          toremove <- which(covvalues[[vr]] == model_data$control$linear_constraints[[vr]]$whichzero[1])
+          covvalues[[vr]] <- covvalues[[vr]][-toremove]
+        }
       }
     }
 
     names(out$smooth) <- rep(names(numtermsvec),numtermsvec)
     out$linear <- c()
+    out$covvalues <- covvalues
   } else {
     # Both linear and smooth terms
     out$smooth <- (model_data$Nd+1):(model_data$Nd+model_data$M)
@@ -127,9 +133,14 @@ get_indices <- function(model_data) {
     numtermsvec <- purrr::reduce(numterms,c)
     names(numtermsvec) <- names(numterms)
     if (!is.null(model_data$vectorofcolumnstoremove)) {
-      if (model_data$vectorofcolumnstoremove != 0) {
-        numtermsvec[1] <- numtermsvec[1] - 1
-        covvalues[[1]] <- covvalues[[1]][-model_data$vectorofcolumnstoremove]
+      if (all(model_data$vectorofcolumnstoremove == 0)) {
+        # Do nothing
+      } else {
+        for (vr in names(model_data$vectorofcolumnstoremove)) {
+          numtermsvec[vr] <- numtermsvec[vr] - 1
+          toremove <- which(covvalues[[vr]] == model_data$control$linear_constraints[[vr]]$whichzero[1])
+          covvalues[[vr]] <- covvalues[[vr]][-toremove]
+        }
       }
     }
 
@@ -141,6 +152,8 @@ get_indices <- function(model_data) {
   }
   out
 }
+
+
 
 #' Marginal means/variances for linear combinations of latent variables
 #'
@@ -249,13 +262,21 @@ make_linear_constraints <- function(model_data) {
     x
   }
 
+  remove_sparsevector_elements <- function(v,ee) {
+    # Remove ee completely from v, by index
+    v@x <- v@x[-ee]
+  }
+
   Uvec <- model_data$control$linear_constraints %>%
     purrr::map("constraint") %>%
     purrr::map(~purrr::reduce(.x,flatten_sparsevectors)) %>%
     purrr::reduce(c)
-  # Account for the one that was manually set to zero
-  if (length(Uvec@x) == 1) return(0)
-  Uvec <- Uvec[-model_data$vectorofcolumnstoremove]
+  # Account for the ones that were manually set to zero
+  Uvec@x <- Uvec@x[!(Uvec@i %in% model_data$vectorofcolumnstoremove)]
+  Uvec@i <- Uvec@i[!(Uvec@i %in% model_data$vectorofcolumnstoremove)]
+  if (length(Uvec@i) == 0) return(0)
+  Uvec@i <- Uvec@i - length(model_data$vectorofcolumnstoremove)
+  Uvec@length <- Uvec@length - length(model_data$vectorofcolumnstoremove)
   # Add on sparseVectors for the first Nd and last p terms
   bigconstrvec <- c(
     sparseVector(x = 0,i = 1,length = model_data$Nd),

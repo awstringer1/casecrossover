@@ -294,12 +294,13 @@ make_linear_constraints <- function(model_data) {
 #' whose means/variances you would like to compute, or an object of class cclincomb output by make_model_lincombs().
 #' If NULL, will be computed automatically. Set lincomb = FALSE in order to prevent this.
 #'
+#'
 #' @export
 #'
 
-i <- index11
-model_results <- opt_11
-model_data <- model_data11
+# i <- index11
+# model_results <- opt_11
+# model_data <- model_data11
 
 compute_marginal_means_and_variances <- function(i,model_results,model_data,constrA = NULL,lincomb = NULL) {
   # If a ccindex object provided, change to numeric
@@ -496,7 +497,8 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
     if (!is.null(lincomb)) finallincombvars <- as.numeric(lincombvars)
 
   } else {
-    postvals <- exp(model_results$theta_logposterior + log(intweights))
+    # postvals <- exp(model_results$theta_logposterior + log(intweights))
+    postvals <- exp(model_results$theta_logposterior)
     finalmeans <- sweep(margmeans,1,postvals,"*") %>% apply(2,sum)
     finalvars <- sweep(margvars,1,postvals,"*") %>% apply(2,sum)
     finallincombvars <- NULL

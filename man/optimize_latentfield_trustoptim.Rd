@@ -8,8 +8,8 @@
 optimize_latentfield_trustoptim(theta, model_data,
   hessian_structure = NULL, Q = NULL, optcontrol = NULL)
 
-optimize_all_thetas_parallel(theta, model_data, hessian_structure = NULL,
-  optcontrol = NULL, doparallel = TRUE)
+optimize_all_thetas_parallel(thetagrid, model_data,
+  hessian_structure = NULL, optcontrol = NULL, doparallel = TRUE)
 }
 \arguments{
 \item{theta}{Vector, representing one configuration of hyperparameters (optimize_latentfield_trustoptim). List of vectors, each
@@ -23,6 +23,8 @@ doing all hyperparameter configurations, only need to compute this once. It will
 \item{Q}{Optional, provide pre-computed Q matrix for this theta. Will be computed if not provided.}
 
 \item{optcontrol}{Optional. Override the casecrossover default control parameters for trust.optim(). See cc_control()$opt_control.}
+
+\item{thetagrid}{A NIGrid object which contains the grid of theta values to be optimized for.}
 
 \item{doparallel}{Logical. Use parallel::mclapply (TRUE) or lapply (FALSE) for execution? Former executes in parallel, latter in series. Default TRUE.}
 }

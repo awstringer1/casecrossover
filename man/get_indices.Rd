@@ -27,4 +27,9 @@ order in which they appear in the model. p is the number of regression coefficie
 To get the means/variances of the random effects, the correct call is
 i = (model_data$Nd+1):(model_data$Nd+model_data$M). To get the regression coefficients,
 the correct call is i = (model_data$Nd+model_data$M+1):(model_data$Nd+model_data$M+model_data$p).
+
+All this is way too complicated for the user, and even for the developer, so here is a
+function to parse the model data and return an object which enumerates which elements
+of the (internal) latent field correspond to which quantities. This is mostly
+used internally.
 }

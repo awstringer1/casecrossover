@@ -65,43 +65,32 @@ test_that("Theta and sigma log-posteriors computed correctly",{
   expect_equal(logpost11$sigma_logposterior[3],log_posterior_sigma(as.numeric(logpost11$sigma[[3]]),logpost11$solution[[3]],model_data11))
 })
 
-# Posterior normalization
-# Try some density functions, which integrate to 1 (so log(normconst) == 0)
-# Test equality to 3 decimal places.
-# The beta distribution is a very difficult case; test to 1 decimal place.
-x1 <- seq(-10,10,by = .01) # Real line
-x2 <- seq(0,50,by = .01) # Positive reals
-x3 <- seq(0.00001,1-.00001,by = 0.00001) # (0,1)
 
-test_that("Normalizing the posterior works as expected",{
-  expect_equal(round(normalize_log_posterior(dnorm(x1,log=TRUE),x1),3),0)
-  expect_equal(round(normalize_log_posterior(dgamma(x2,1,1,log=TRUE),x2),3),0)
-  expect_equal(round(normalize_log_posterior(dgamma(x2,2,3,log=TRUE),x2),3),0)
-  expect_equal(round(normalize_log_posterior(dbeta(x3,1,1,log=TRUE),x3),3),0)
-  expect_equal(round(normalize_log_posterior(dbeta(x3,2,3,log=TRUE),x3),1),0)
-  expect_equal(round(normalize_log_posterior(dbeta(x3,.5,1,log=TRUE),x3),1),0)
+
+test_that("Normalizing the posterior works as expected, simple functions",{
+  expect_equal(round(normalize_log_posterior(f1vals,x1),2),0)
+  expect_equal(normalize_log_posterior(f1vals,x1),log(mvQuad::quadrature(f1exp,x1)))
+
+  expect_equal(round(normalize_log_posterior(f2vals,x2),2),0)
+  expect_equal(normalize_log_posterior(f2vals,x2),log(mvQuad::quadrature(f2exp,x2)))
+
+  expect_equal(round(normalize_log_posterior(f3vals,x3),2),0)
+  expect_equal(normalize_log_posterior(f3vals,x3),log(mvQuad::quadrature(f3exp,x3)))
 })
 
-f1 <- function(x,y,z) mvtnorm::dmvnorm(x = c(x,y,z),log = TRUE)
-f2 <- function(x,y) dgamma(x,2,3,log=TRUE) + dgamma(y,3,2,log=TRUE)
-
-ttg1 <- expand.grid(seq(-5,5,by=.5),seq(-5,5,by=.5),seq(-5,5,by=.5))
-pp1 <- ttg1 %>% rowwise() %>% mutate(fx = f1(Var1,Var2,Var3)) %>% pull(fx)
-tt1 <- list()
-for (i in 1:nrow(ttg1)) {
-  tt1[[i]] <- as.numeric(ttg1[i, ])
-}
-
-ttg2 <- expand.grid(seq(0,5,by=.1),seq(0,5,by=.1))
-pp2 <- ttg2 %>% rowwise() %>% mutate(fx = f2(Var1,Var2)) %>% pull(fx)
-tt2 <- list()
-for (i in 1:nrow(ttg2)) {
-  tt2[[i]] <- as.numeric(ttg2[i, ])
-}
-
-test_that("Normalizing the posterior works as expected, multiple dimensions",{
-  expect_equal(round(normalize_log_posterior(pp1,tt1),1),0)
-  expect_equal(round(normalize_log_posterior(pp2,tt2),1),0)
+test_that("Normalizing the posterior works as expected, actual model objects",{
+  expect_equal(sum(exp(logpost_norm1$theta_logposterior) * mvQuad::getWeights(attributes(logpost1)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm2$theta_logposterior) * mvQuad::getWeights(attributes(logpost2)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm3$theta_logposterior) * mvQuad::getWeights(attributes(logpost3)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm4$theta_logposterior) * mvQuad::getWeights(attributes(logpost4)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm5$theta_logposterior) * mvQuad::getWeights(attributes(logpost5)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm6$theta_logposterior) * mvQuad::getWeights(attributes(logpost6)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm7$theta_logposterior) * mvQuad::getWeights(attributes(logpost7)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm8$theta_logposterior) * mvQuad::getWeights(attributes(logpost8)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm9$theta_logposterior) * mvQuad::getWeights(attributes(logpost9)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm10$theta_logposterior) * mvQuad::getWeights(attributes(logpost10)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm11$theta_logposterior) * mvQuad::getWeights(attributes(logpost11)$thetagrid)),1)
+  expect_equal(sum(exp(logpost_norm13$theta_logposterior) * mvQuad::getWeights(attributes(logpost13)$thetagrid)),1)
 })
 
 # Obtaining the correct indices for model terms
@@ -130,6 +119,9 @@ test_that("Obtaining indices works as expected",{
 
   expect_equal(index11$linear,c("x" = 10,"x" = 11,"x2" = 12,"x2" = 13,"x2" = 14))
   expect_equal(index11$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9))
+
+  expect_equal(index13$linear,c("x" = 10,"x" = 11,"x2" = 12,"x2" = 13,"x2" = 14))
+  expect_equal(index13$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9))
 })
 
 # Linear combinations
@@ -159,6 +151,13 @@ test_that("Making model linear combinations works as expected",{
   expect_equal(make_model_lincombs(model_data11)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
   expect_equal(make_model_lincombs(model_data11)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
   expect_equal(make_model_lincombs(model_data11)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
+
+  expect_equal(make_model_lincombs(model_data13)[ ,1],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data13)[ ,2],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data13)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
 })
 
 # Linear constraints
@@ -173,5 +172,50 @@ test_that("Linear constraints are converted to matrix format correctly",{
   expect_equal(make_linear_constraints(model_data11)@i,7) # Row and column indices are 0-based
   expect_equal(make_linear_constraints(model_data11)@j,0)
   expect_equal(make_linear_constraints(model_data11)@Dim,c(model_data11$Wd,1))
+
+  expect_equal(make_linear_constraints(model_data13)@x,c(1,1))
+  expect_equal(make_linear_constraints(model_data13)@i,c(2,7)) # Row and column indices are 0-based
+  expect_equal(make_linear_constraints(model_data13)@j,c(0,1))
+  expect_equal(make_linear_constraints(model_data13)@Dim,c(model_data11$Wd,2))
+})
+
+# Final means and variances
+test_that("Post-hoc quantities are computed as expected",{
+  # No linear constraints or combinations
+  expect_gt(posthoc1$variance,0)
+  expect_null(posthoc1$lincombvars)
+
+  expect_gt(posthoc2$variance,0)
+  expect_null(posthoc2$lincombvars)
+
+  expect_true(all(posthoc3$variance>0))
+  expect_equal(length(posthoc3$mean),length(posthoc3$variance))
+  expect_null(posthoc3$lincombvars)
+
+  expect_true(all(posthoc4$variance>0))
+  expect_equal(length(posthoc4$mean),length(posthoc4$variance))
+  expect_null(posthoc4$lincombvars)
+
+  expect_true(all(posthoc5$variance>0))
+  expect_equal(length(posthoc5$mean),length(posthoc5$variance))
+  expect_equal(ncol(make_model_lincombs(model_data5)),length(posthoc5$lincombvars))
+
+  expect_true(all(posthoc6$variance>0))
+  expect_equal(length(posthoc6$mean),length(posthoc6$variance))
+  expect_equal(ncol(make_model_lincombs(model_data6)),length(posthoc6$lincombvars))
+
+  expect_true(all(posthoc7$variance>0))
+  expect_equal(length(posthoc7$mean),length(posthoc7$variance))
+  expect_null(posthoc7$lincombvars)
+
+  expect_true(all(posthoc8$variance>0))
+  expect_equal(length(posthoc8$mean),length(posthoc8$variance))
+  expect_null(posthoc8$lincombvars)
+
+  expect_true(all(posthoc9$variance>0))
+  expect_equal(length(posthoc9$mean),length(posthoc9$variance))
+  expect_equal(ncol(make_model_lincombs(model_data9)),length(posthoc9$lincombvars))
+
+
 })
 

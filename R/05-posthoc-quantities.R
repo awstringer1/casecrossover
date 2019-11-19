@@ -23,11 +23,14 @@ add_log_posterior_values <- function(optresults,model_data) {
     purrr::pmap(~log_posterior_theta(unlist(..1),unlist(..4),model_data,hessian_structure)) %>%
     purrr::reduce(c)
   optresults$theta_logposterior <- logposttheta
-  optresults <- optresults %>%
+
+  out <- optresults %>%
     dplyr::rowwise() %>%
     dplyr::mutate(sigma = list(exp(-.5 * unlist(.data[["theta"]]))),
            sigma_logposterior = length(unlist(.data[["sigma"]])) * log(2) - sum(log(unlist(.data[["sigma"]]))) + .data[["theta_logposterior"]])
-  optresults
+
+  attr(out,"thetagrid") <- attributes(optresults)$thetagrid
+  out
 }
 
 #' Normalize log-posterior via simple numerical integration
@@ -40,7 +43,7 @@ add_log_posterior_values <- function(optresults,model_data) {
 #' a multidimensional hyperparameter, the function only works on a uniform grid (in all dimensions).
 #'
 #' @param pp logged function values
-#' @param tt grid points at which these function values were computed
+#' @param tt grid points at which these function values were computed, as a NIGrid object
 #'
 #' @return A number giving the LOG of the integral of the function used to compute pp.
 #' This is the log-normalizing constant.
@@ -48,20 +51,29 @@ add_log_posterior_values <- function(optresults,model_data) {
 #' @export
 #'
 normalize_log_posterior <- function(pp,tt) {
-  # pp: log posterior
-  # tt: theta values at which pp is evaluated. Vector (if single dimension) or list of vectors.
-  # function returns the LOG of the normalizing constant
+  # tt: grid returned by mvQuad::createNIGrid
+  # pp: log posterior evaluated at these points
+  ww <- mvQuad::getWeights(tt)
+  matrixStats::logSumExp(log(ww) + pp)
+}
 
-  # Make sure tt is sorted
-  if (is.numeric(tt)) {
-    val <- normalize_log_posterior_single(pp,tt)
-    return(val)
-  } else if (is.list(tt)) {
-    val <- normalize_log_posterior_multiple(pp,tt)
-    return(val)
-  } else {
-    stop("tt values must either be numeric or list.")
-  }
+#' Normalize the log posterior returned by the optimization
+#'
+#' @description Wrapper around normalize_log_posterior() that takes in
+#' the dataframe of optimization results and returns the same dataframe
+#' but with the theta_logposterior column normalized.
+#'
+#' @param optresults Optimization results, a tibble() output by optimize_all_thetas_parallel().
+#'
+#' @return Data frame of optimization results with the theta_logposterior column normalized,
+#' i.e. satisfying logSumExp(theta_logposterior) = 0
+#'
+#' @export
+#'
+normalize_optresults_logpost <- function(optresults) {
+  thetanormconst <- normalize_log_posterior(optresults$theta_logposterior,attributes(optresults)$thetagrid)
+  optresults$theta_logposterior <- optresults$theta_logposterior - thetanormconst
+  optresults
 }
 
 #' Helper function to return the correct indices for latent variables
@@ -80,6 +92,11 @@ normalize_log_posterior <- function(pp,tt) {
 #' To get the means/variances of the random effects, the correct call is
 #' i = (model_data$Nd+1):(model_data$Nd+model_data$M). To get the regression coefficients,
 #' the correct call is i = (model_data$Nd+model_data$M+1):(model_data$Nd+model_data$M+model_data$p).
+#'
+#' All this is way too complicated for the user, and even for the developer, so here is a
+#' function to parse the model data and return an object which enumerates which elements
+#' of the (internal) latent field correspond to which quantities. This is mostly
+#' used internally.
 #'
 #' @param model_data ccmodeldata object as returned by model_setup().
 #'
@@ -169,7 +186,7 @@ get_indices <- function(model_data) {
 #'
 #' @param model_data ccmodeldata object output by model_setup()
 #'
-#' @return A sparse matrix with one column per necessary linear combination
+#' @return A sparse matrix with one column per necessary linear combination.
 #'
 #' @export
 #'
@@ -323,8 +340,9 @@ make_linear_constraints <- function(model_data) {
 # model_results <- opt_11
 # model_data <- model_data11
 
-compute_marginal_means_and_variances <- function(i,model_results,model_data,constrA = NULL,lincomb = NULL) {
+compute_marginal_means_and_variances <- function(model_results,model_data,i = NULL,constrA = NULL,lincomb = NULL) {
   # If a ccindex object provided, change to numeric
+  if (is.null(i)) i <- get_indices(model_data)
   if (class(i) == "ccindex") {
     idx <- c(i$smooth,i$linear)
   } else if (is.numeric(i)) {
@@ -333,7 +351,6 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
     stop(stringr::str_c("i must be an object of class ccindex, or a numeric vector. You provided an object of class ",class(i)))
   }
   idx <- unname(idx)
-
 
   # Pull constraints from model_data
   if (is.null(constrA)) {
@@ -375,13 +392,11 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
       model_results <- add_log_posterior_values(model_results,model_data)
     }
     # Normalize
-    thetanormconst <- normalize_log_posterior(model_results$theta_logposterior,model_results$theta)
+    thetanormconst <- normalize_log_posterior(model_results$theta_logposterior,attributes(model_results)$thetagrid)
     model_results$theta_logposterior <- model_results$theta_logposterior - thetanormconst
     # Note that doing this still leaves sigma_logposterior unnormalized! But it's not used in this function.
 
     # Get the integration weights
-    # UPDATE: I don't think these are used, lemme check the bottom (they shouldn't be used since theta_logposterior is normalized).
-    # TODO: check the bottom to make sure they aren't used.
     # dx1 <- diff(model_results$theta) # dx1[i] = x[i+1] - x[i]
     # ld <- length(dx1)
     # intweights <- c(
@@ -389,6 +404,7 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
     #   (dx1[1:(ld-1)] + dx1[2:ld])/2,
     #   dx1[ld]/2
     # )
+    intweights <- mvQuad::getWeights(attributes(model_results)$thetagrid)[ ,1]
   }
 
   # Compute the precision matrices for each theta
@@ -428,7 +444,7 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
   }
 
   # If no linear constraints, compute the marginal means and variances as normal
-  if (is.null(constrA)) {
+  if (is.null(constrA) | all(constrA == 0)) {
     margmeans <- model_results %>%
       purrr::pmap(~..4) %>%
       purrr::map(t) %>%
@@ -436,7 +452,7 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
 
     # Marginal variances: add the precision and the hessian and get diagOfInv
     margvars <- purrr::map2(precision_matrices,hessians,~.x[["Q"]] + .y[["C"]]) %>%
-      purrr::map(~diagOfInv(x = .x,constrA = NULL,i = i)) %>%
+      purrr::map(~diagOfInv(x = .x,constrA = NULL,i = idx)) %>%
       purrr::reduce(rbind)
 
     # If there are linear combinations, compute their variances separately from diagOfInv
@@ -518,19 +534,18 @@ compute_marginal_means_and_variances <- function(i,model_results,model_data,cons
     if (!is.null(lincomb)) finallincombvars <- as.numeric(lincombvars)
 
   } else {
-    # postvals <- exp(model_results$theta_logposterior + log(intweights))
-    postvals <- exp(model_results$theta_logposterior)
+    postvals <- exp(model_results$theta_logposterior + log(intweights))
+    # postvals <- exp(model_results$theta_logposterior)
     finalmeans <- sweep(margmeans,1,postvals,"*") %>% apply(2,sum)
     finalvars <- sweep(margvars,1,postvals,"*") %>% apply(2,sum)
     finallincombvars <- NULL
     if (!is.null(lincomb)) finallincombvars <- sweep(lincombvars,1,postvals,"*") %>% apply(2,sum)
-    finalmeans <- finalmeans[i]
+    finalmeans <- finalmeans[idx]
   }
 
   list(mean = finalmeans,
        variance = finalvars,
        lincombvars = finallincombvars)
-
 }
 
 

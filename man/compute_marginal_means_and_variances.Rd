@@ -4,17 +4,17 @@
 \alias{compute_marginal_means_and_variances}
 \title{Compute marginal means and variances}
 \usage{
-compute_marginal_means_and_variances(i, model_results, model_data,
+compute_marginal_means_and_variances(model_results, model_data, i = NULL,
   constrA = NULL, lincomb = NULL)
 }
 \arguments{
-\item{i}{Either a 1) vector giving the indices of the latent variables for which you want marginal
-means and variances or 2) an object of class ccindex output by get_indices() which prescribes which
-terms you want means/variances for.}
-
 \item{model_results}{Output of optimization; can be before or after you call add_log_posterior_values().}
 
 \item{model_data}{ccmodeldata object output by model_setup()}
+
+\item{i}{Either a 1) vector giving the indices of the latent variables for which you want marginal
+means and variances or 2) an object of class ccindex output by get_indices() which prescribes which
+terms you want means/variances for.}
 
 \item{constrA}{Either a sparse matrix whose columns contain linear constraints under which you would
 like to compute means/variances, or NULL. If NULL, any linear constraints will be pulled from model_data.}

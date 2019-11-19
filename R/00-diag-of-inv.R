@@ -8,6 +8,7 @@ diagOfInv = function(x, verbose=FALSE,constrA = NULL,i = NULL) {
   # of marginal variances. However, correcting for linear constraints needs only the subset i,
   # which if small can drastically decrease run time.
 
+  # return(diag(solve(x)))
   if (is.null(i)) i <- 1:dim(x)[1]
 
   if(verbose) {
@@ -32,8 +33,10 @@ diagOfInv = function(x, verbose=FALSE,constrA = NULL,i = NULL) {
 
   # varDiag = cholHere$LinvDf[, .(sum = sum(x)), by = col]
   # Change the use of "." because R package doesn't like nonstandard eval:
-  varDiag = cholHere$LinvDf[, list(sum = sum(x)), by = col]
-
+  # varDiag = cholHere$LinvDf[, list(sum = sum(x)), by = col]
+  varDiag = cholHere$LinvDf %>%
+    dplyr::group_by(.data[["col"]]) %>%
+    dplyr::summarize(sum = sum(.data[["x"]]))
 
   if(verbose) {
     cat("permute\n")

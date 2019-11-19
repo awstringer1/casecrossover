@@ -10,7 +10,7 @@ make_model_lincombs(model_data)
 \item{model_data}{ccmodeldata object output by model_setup()}
 }
 \value{
-A sparse matrix with one column per necessary linear combination
+A sparse matrix with one column per necessary linear combination.
 }
 \description{
 The compute_marginal_means_and_variances() function lets you specify a sparse matrix of

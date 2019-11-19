@@ -9,7 +9,7 @@ normalize_log_posterior(pp, tt)
 \arguments{
 \item{pp}{logged function values}
 
-\item{tt}{grid points at which these function values were computed}
+\item{tt}{grid points at which these function values were computed, as a NIGrid object}
 }
 \value{
 A number giving the LOG of the integral of the function used to compute pp.

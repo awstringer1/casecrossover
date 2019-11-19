@@ -106,14 +106,18 @@ optimize_latentfield_trustoptim <- function(theta,model_data,hessian_structure =
 #' have to wait a little longer (long enough to go to the store and buy a serious computer maybe?).
 #'
 #' @rdname optimize_latentfield_trustoptim
+#' @param thetagrid A NIGrid object which contains the grid of theta values to be optimized for.
 #' @param doparallel Logical. Use parallel::mclapply (TRUE) or lapply (FALSE) for execution? Former executes in parallel, latter in series. Default TRUE.
 #'
 #' @export
 #'
-optimize_all_thetas_parallel <- function(theta,model_data,hessian_structure = NULL,optcontrol = NULL,doparallel = TRUE) {
+optimize_all_thetas_parallel <- function(thetagrid,model_data,hessian_structure = NULL,optcontrol = NULL,doparallel = TRUE) {
 
-  # Check theta is formatted correctly
-  if (!is.list(theta)) stop("theta should be a list.")
+  # Check thetagrid is formatted correctly
+  if (!inherits(thetagrid,"NIGrid")) stop("theta should be a NIGrid object returned by mvQuad::createNIgrid()")
+  # Create the theta list
+  theta <- split(mvQuad::getNodes(thetagrid),rep(1:nrow(mvQuad::getNodes(thetagrid)),ncol(mvQuad::getNodes(thetagrid))))
+
   if (!all(purrr::map_lgl(theta,is.numeric))) stop("theta should be a list of numeric vectors")
   thetalengths <- purrr::map_dbl(theta,length)
   if (length(unique(thetalengths)) != 1) stop("Make sure all thetas are the same length.")
@@ -142,7 +146,7 @@ optimize_all_thetas_parallel <- function(theta,model_data,hessian_structure = NU
   opt_time <- unname(opt_time["elapsed"])
   cat("Time taken for optimization with ",length(theta)," values of theta:",opt_time,"seconds.\n")
 
-  # If the user supplied multiple identical values of theta,
-  # take the best mode for each
-  optlist_to_tibble(opt)
+  out <- optlist_to_tibble(opt)
+  attr(out,"thetagrid") <- thetagrid
+  out
 }

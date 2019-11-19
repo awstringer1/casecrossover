@@ -27,7 +27,8 @@ Imports:
   matrixStats,
   methods,
   trustOptim,
-  data.table
+  data.table,
+  mvQuad
 RoxygenNote: 6.1.1
 Suggests: 
     knitr,

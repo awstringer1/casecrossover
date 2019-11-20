@@ -182,53 +182,57 @@ test_that("Linear constraints are converted to matrix format correctly",{
 # Final means and variances
 test_that("Post-hoc quantities are computed as expected",{
   # No linear constraints or combinations
-  expect_gt(posthoc1$variance,0)
+  expect_gte(posthoc1$variance,0)
   expect_null(posthoc1$lincombvars)
 
-  expect_gt(posthoc2$variance,0)
+  expect_gte(posthoc2$variance,0)
   expect_null(posthoc2$lincombvars)
 
-  expect_true(all(posthoc3$variance>0))
+  expect_true(all(posthoc3$variance>=0))
   expect_equal(length(posthoc3$mean),length(posthoc3$variance))
   expect_null(posthoc3$lincombvars)
 
-  expect_true(all(posthoc4$variance>0))
+  expect_true(all(posthoc4$variance>=0))
   expect_equal(length(posthoc4$mean),length(posthoc4$variance))
   expect_null(posthoc4$lincombvars)
 
-  expect_true(all(posthoc5$variance>0))
+  expect_true(all(posthoc5$variance>=0))
   expect_equal(length(posthoc5$mean),length(posthoc5$variance))
   expect_equal(ncol(make_model_lincombs(model_data5)),length(posthoc5$lincombvars))
 
-  expect_true(all(posthoc6$variance>0))
+  expect_true(all(posthoc6$variance>=0))
   expect_equal(length(posthoc6$mean),length(posthoc6$variance))
   expect_equal(ncol(make_model_lincombs(model_data6)),length(posthoc6$lincombvars))
 
-  expect_true(all(posthoc7$variance>0))
+  expect_true(all(posthoc7$variance>=0))
   expect_equal(length(posthoc7$mean),length(posthoc7$variance))
   expect_null(posthoc7$lincombvars)
 
-  expect_true(all(posthoc8$variance>0))
+  expect_true(all(posthoc8$variance>=0))
   expect_equal(length(posthoc8$mean),length(posthoc8$variance))
   expect_null(posthoc8$lincombvars)
 
-  expect_true(all(posthoc9$variance>0))
+  expect_true(all(posthoc9$variance>=0))
   expect_equal(length(posthoc9$mean),length(posthoc9$variance))
   expect_equal(ncol(make_model_lincombs(model_data9)),length(posthoc9$lincombvars))
 
-  expect_true(all(posthoc10$variance>0))
+  expect_true(all(posthoc10$variance>=0))
   expect_equal(length(posthoc10$mean),length(posthoc10$variance))
   expect_equal(ncol(make_model_lincombs(model_data10)),length(posthoc10$lincombvars))
 
   # Ones with additional constraints:
-  expect_true(all(posthoc11$variance>0))
+  expect_true(all(posthoc11$variance>=0))
   expect_equal(length(posthoc11$mean),length(posthoc11$variance))
   expect_equal(ncol(make_model_lincombs(model_data11)),length(posthoc11$lincombvars))
-  expect_equal(round(posthoc11$mean[make_linear_constraints(model_data11)@i+1],3),0)
+  expect_equal(posthoc11$mean[model_data11$vectorofcolumnstoremove],rep(0,length(model_data11$vectorofcolumnstoremove)))
+  expect_equal(posthoc11$variance[model_data13$vectorofcolumnstoremove],rep(0,length(model_data13$vectorofcolumnstoremove)))
+  expect_equal(round(posthoc11$mean[7],3),0)
 
-  expect_true(all(posthoc13$variance>0))
+  expect_true(all(posthoc13$variance>=0))
   expect_equal(length(posthoc13$mean),length(posthoc13$variance))
   expect_equal(ncol(make_model_lincombs(model_data13)),length(posthoc13$lincombvars))
-  expect_equal(round(posthoc13$mean[make_linear_constraints(model_data13)@i+1],3),c(0,0))
+  expect_equal(posthoc13$mean[model_data13$vectorofcolumnstoremove],rep(0,length(model_data13$vectorofcolumnstoremove)))
+  expect_equal(posthoc13$variance[model_data13$vectorofcolumnstoremove],rep(0,length(model_data13$vectorofcolumnstoremove)))
+  expect_equal(round(posthoc13$mean[c(2,7)],3),c(0,0))
 })
 

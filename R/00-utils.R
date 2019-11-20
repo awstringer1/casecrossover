@@ -201,6 +201,18 @@ normalize_log_posterior_multiple <- function(pp,tt) {
 # normalize_log_posterior_multiple(pp,tt) # Should be zero, i.e. log(1)
 
 
+# INTERNAL: take a vector of values, a vector of indices, and return a vector
+# containing the values of the first with zeroes spliced in at the indices
+# specified by the second
+stitch_zero_vector <- function(x,z) {
+  if (any(z > length(x) + 1)) stop("You are asking for zeroes at positions not covered by x")
+  x <- as(x,"sparseVector")
+  for (j in z) {
+    x@i[x@i >= j] <- x@i[x@i >= j] + 1
+  }
+  as.numeric(x)
+}
+
 
 
 

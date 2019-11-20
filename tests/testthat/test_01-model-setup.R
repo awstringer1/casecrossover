@@ -1,15 +1,21 @@
-context("Model setup")
+context("Model setup and utilities")
 library(casecrossover)
 library(dplyr) # For tests
 # source("prep-sample-data.R")
 
-
-test_that("Placeholder test",{
-  expect_equal(1,1)
-})
-
 test_that("Control parameters correctly specified",{
   expect_equal(names(cc_default_control()),names(cc_control()))
+})
+
+# Some utilities
+test_that("Vector stitching works as expected",{
+  expect_error(stitch_zero_vector(1:5,7))
+  expect_equal(stitch_zero_vector(1:5,3),c(1,2,0,3,4,5))
+  expect_equal(stitch_zero_vector(1:5,c(1,2)),c(0,0,1,2,3,4,5))
+  expect_equal(stitch_zero_vector(1:5,c(1,3,5)),c(0,1,0,2,0,3,4,5))
+
+  expect_equal(stitch_zero_vector(1:100,c(10,50,90:100))[c(10,50,90:100)],rep(0,13))
+  expect_equal(stitch_zero_vector(1:100,c(10,50,90:100))[-c(10,50,90:100)],1:100)
 })
 
 PARSELENGTH <- 5

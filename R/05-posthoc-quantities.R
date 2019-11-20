@@ -529,6 +529,16 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
     finalmeans <- finalmeans[idx]
   }
 
+  # If elements of the latent field were manually removed, now is the time to add them
+  # back in!
+  if (!is.null(model_data$vectorofcolumnstoremove)) {
+    if (!all(model_data$vectorofcolumnstoremove == 0)) {
+
+      finalmeans <- stitch_zero_vector(finalmeans,model_data$vectorofcolumnstoremove)
+      finalvars <- stitch_zero_vector(finalvars,model_data$vectorofcolumnstoremove)
+    }
+  }
+
   list(mean = finalmeans,
        variance = finalvars,
        lincombvars = finallincombvars)

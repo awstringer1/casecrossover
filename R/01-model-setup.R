@@ -397,8 +397,6 @@ model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
   } else {
     model_data$M <- Alist %>% purrr::map("A") %>% purrr::map(ncol) %>% purrr::reduce(sum)
   }
-  # TODO: when implementing the linear constraint part, where one element of the
-  # precision matrix is set to 0, make sure to make the appropriate reduction in M
 
   # Number of subjects
   n <- length(unique(data[model_elements$strata]))
@@ -474,22 +472,14 @@ model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
     model_data$Xd <- model_data$diffmat %*% model_data$X
   }
 
-  # TODO: linear constraints. The first one should be taken out explicitly then put back
-  # in. The others are corrected after. This behaviour does not need to be exposed to the user.
-  # model_data$vectorofcolumnstoremove <- round(RW2BINS/2)
-
   # Check for linear constraints. Validate and then add them to the model data.
   # If there are linear constraints, take the first one for each variable and create the
   # model_data$vectorofcolumnstoremove element.
-  #
-  # UPDATE: actually, I don't think you need to take one from each. Just take the first one.
-  # UPDATE AGAIN: nope, that was wishful thinking. I knew in my heart that this wasn't true :(
-  # Now I gotta do it for each variable.
   if (length(model_elements$smooth) > 0) {
     if (length(control$linear_constraints) != length(model_elements$smooth)) {
       warning("Smooth terms, but no linear constraints, specified. You should add one or more constraints. See create_linear_constraints().")
     } else {
-      # For each smooth term with a constraint, Take the first one and use it to set one to zer
+      # For each smooth term with a constraint, Take the first one and use it to set one to zero
       k <- 0
       s <- 1
       model_data$vectorofcolumnstoremove <- numeric()

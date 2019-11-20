@@ -423,7 +423,6 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
   # If linear combinations required, set up the relevant functions
   if (!is.null(lincomb)) {
     compute_var_one_lincomb <- function(a,Q) {
-      # a <- cbind(a)
       ZZ <- solve(Q,a)
       as.numeric(crossprod(a,ZZ))
     }
@@ -501,7 +500,7 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
     QpC_corrected <- purrr::map2(precision_matrices,corrected_hessians,~list(QpC = .x[["Q"]] + .y[["C"]],theta = .x[["theta"]]))
 
     # uncorrectedvariances <- purrr::map(QpC_corrected,~diagOfInv(x = .x[["QpC"]],constrA = NULL,i = i))
-    margvars <- purrr::map(QpC_corrected,~diagOfInv(x = .x[["QpC"]],constrA = constrA,i = i)) %>%
+    margvars <- purrr::map(QpC_corrected,~diagOfInv(x = .x[["QpC"]],constrA = constrA,i = idx)) %>%
       purrr::reduce(rbind)
     if (!is.matrix(margvars)) margvars <- matrix(margvars,nrow = 1)
 

@@ -216,6 +216,10 @@ test_that("Post-hoc quantities are computed as expected",{
   expect_equal(length(posthoc9$mean),length(posthoc9$variance))
   expect_equal(ncol(make_model_lincombs(model_data9)),length(posthoc9$lincombvars))
 
+  expect_true(all(posthoc10$variance>0))
+  expect_equal(length(posthoc10$mean),length(posthoc10$variance))
+  expect_equal(ncol(make_model_lincombs(model_data10)),length(posthoc10$lincombvars))
+
 
 })
 

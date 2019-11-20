@@ -174,7 +174,7 @@ test_that("Linear constraints are converted to matrix format correctly",{
   expect_equal(make_linear_constraints(model_data11)@Dim,c(model_data11$Wd,1))
 
   expect_equal(make_linear_constraints(model_data13)@x,c(1,1))
-  expect_equal(make_linear_constraints(model_data13)@i,c(2,7)) # Row and column indices are 0-based
+  expect_equal(make_linear_constraints(model_data13)@i,c(3,7)) # Row and column indices are 0-based
   expect_equal(make_linear_constraints(model_data13)@j,c(0,1))
   expect_equal(make_linear_constraints(model_data13)@Dim,c(model_data11$Wd,2))
 })
@@ -220,6 +220,15 @@ test_that("Post-hoc quantities are computed as expected",{
   expect_equal(length(posthoc10$mean),length(posthoc10$variance))
   expect_equal(ncol(make_model_lincombs(model_data10)),length(posthoc10$lincombvars))
 
+  # Ones with additional constraints:
+  expect_true(all(posthoc11$variance>0))
+  expect_equal(length(posthoc11$mean),length(posthoc11$variance))
+  expect_equal(ncol(make_model_lincombs(model_data11)),length(posthoc11$lincombvars))
+  expect_equal(round(posthoc11$mean[make_linear_constraints(model_data11)@i+1],3),0)
 
+  expect_true(all(posthoc13$variance>0))
+  expect_equal(length(posthoc13$mean),length(posthoc13$variance))
+  expect_equal(ncol(make_model_lincombs(model_data13)),length(posthoc13$lincombvars))
+  expect_equal(round(posthoc13$mean[make_linear_constraints(model_data13)@i+1],3),c(0,0))
 })
 

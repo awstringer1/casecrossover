@@ -269,46 +269,33 @@ make_linear_constraints <- function(model_data) {
   if (is.null(model_data$control$linear_constraints)) stop("No linear constraints provided in model_data$control")
   if (length(model_data$control$linear_constraints) == 0) stop("No linear constraints provided in model_data$control")
 
-  # Band together all the covariate's constraints.
-  flatten_sparsevectors <- function(x,y) {
-    # combine x and y together into one sparse vector
-    if (length(x@i) != length(y@i)) stop(stringr::str_c("x and y don't have the same number of nonzeroes. x has ",length(x@x)," nonzeros and y has ",length(y@x)))
-    if (length(intersect(x@i,y@i)) > 0) stop("x and y have overlapping nonzeroes")
-    x@x <- c(x@x,y@x)
-    x@i <- c(x@i,y@i)
-    x
+  # Pull the constraints from the model data, retaining only those that
+  # have more than one value. Single-value constraints are automatically done in the precision matrix
+  constr <- model_data$control$linear_constraints %>% purrr::map("whichzero") %>%
+    purrr::keep(~length(.x) > 1)
+  if (length(constr) == 0) return(0) # No additional constraints beyond what was manually set to zero.
+  # Get the indices of all unique covariate values that haven't already been set to zero:
+  idx <- get_indices(model_data)
+  # For the constraints that appear in covvalues (because they haven't already been
+  # manually removed), figure out which element of the covvalues it is, then take
+  # that element from the idx$smooth for that covariate (!)
+  get_constraint_index <- function(nm) {
+    cvec <- constr[[nm]]
+    ivec <- idx$covvalues[[nm]]
+    idxvec <- idx$smooth[names(idx$smooth) == nm]
+    cvec <- cvec[cvec %in% ivec]
+    out <- numeric(length(cvec))
+    for (j in 1:length(cvec)) out[j] <- idxvec[which(cvec[j] == ivec)]
+    unname(out)
   }
+  # Create a sparse matrix of constraints
+  names(constr) %>%
+    purrr::map(get_constraint_index) %>%
+    purrr::map(~Matrix::sparseVector(x = 1,i = .x,length = model_data$Wd)) %>%
+    purrr::map(as,Class = "sparseMatrix") %>%
+    purrr::reduce(cbind) %>%
+    as(Class = "dgTMatrix")
 
-  remove_sparsevector_elements <- function(v,ee) {
-    # Remove ee completely from v, by index
-    v@x <- v@x[-ee]
-  }
-
-  Uvec <- model_data$control$linear_constraints %>%
-    purrr::map("constraint") %>%
-    purrr::map(~purrr::reduce(.x,flatten_sparsevectors)) %>%
-    purrr::reduce(c)
-  # Account for the ones that were manually set to zero
-  Uvec@x <- Uvec@x[!(Uvec@i %in% model_data$vectorofcolumnstoremove)]
-  Uvec@i <- Uvec@i[!(Uvec@i %in% model_data$vectorofcolumnstoremove)]
-  if (length(Uvec@i) == 0) return(0)
-  Uvec@i <- Uvec@i - length(model_data$vectorofcolumnstoremove)
-  Uvec@length <- Uvec@length - length(model_data$vectorofcolumnstoremove)
-  # Add on sparseVectors for the first Nd and last p terms
-  bigconstrvec <- c(
-    sparseVector(x = 0,i = 1,length = model_data$Nd),
-    Uvec,
-    sparseVector(x = 0,i = 1,model_data$p)
-  )
-  # Now expand this into a matrix
-  out <- 1:length(bigconstrvec@i) %>%
-    purrr::map(~sparseVector(x = bigconstrvec@x[.x],
-                             i = bigconstrvec@i[.x],
-                             length = bigconstrvec@length)) %>%
-    purrr::map(~as(.,"sparseMatrix")) %>%
-    purrr::reduce(cbind)
-
-  as(out,"dgTMatrix")
 }
 
 

@@ -34,6 +34,8 @@
 #'
 #' @return An object of class "cc_fit", with methods for summary() and plot().
 #'
+#' @export
+#'
 
 # # formula <- case1 ~ s(x) + s(x2) + poly(x,2,raw = TRUE) + poly(x2,3,raw=TRUE) + strata(id)
 # formula <- case1 ~ x + strata(id)

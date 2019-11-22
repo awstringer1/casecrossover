@@ -279,7 +279,7 @@ cc6 <- casecrossover(case2 ~ x + s(x) + strata(id),sampledata,controlsmooth)
 cc7 <- casecrossover(case1 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
 cc8 <- casecrossover(case2 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
 
-# cc9 <- casecrossover(case1 ~ s(x) + s(x2) + poly(x,2,raw = TRUE) + poly(x2,3,raw=TRUE) + strata(id),sampledata,controlsmooth2)
+cc9 <- casecrossover(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
 cc10 <- casecrossover(case2 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
 
 cc11 <- casecrossover(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth3)

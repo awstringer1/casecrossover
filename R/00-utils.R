@@ -210,11 +210,14 @@ normalize_log_posterior_multiple <- function(pp,tt) {
 # specified by the second
 stitch_zero_vector <- function(x,z) {
   if (any(z > length(x) + 1)) stop("You are asking for zeroes at positions not covered by x")
-  x <- as(x,"sparseVector")
+  y <- as(x,"sparseVector")
+  # This drops zero values in x automatically- add them back in
+  y@i <- 1:length(x)
+  y@x <- x
   for (j in z) {
-    x@i[x@i >= j] <- x@i[x@i >= j] + 1
+    y@i[y@i >= j] <- y@i[y@i >= j] + 1
   }
-  as.numeric(x)
+  as.numeric(y)
 }
 
 

@@ -105,16 +105,54 @@ summary.cc_fit <- function(object,...) {
 
   call <- object$modeldata$model_elements$call
 
-  summarytablefixed <- data.frame(
-    mean = object$posthoc$mean,
-    sd = sqrt(object$posthoc$variance),
-    q2.5 = stats::qnorm(.025,mean = object$posthoc$mean,sd = sqrt(object$posthoc$variance)),
-    q97.5 = stats::qnorm(.975,mean = object$posthoc$mean,sd = sqrt(object$posthoc$variance))
-  )
-  rownames(summarytablefixed) <- colnames(object$modeldata$X)
+  summarytablefixed <- summarytablerandom <- NULL
+
+  if ("linear" %in% names(idx)) {
+    linearidx <- idx$linear - object$modeldata$Nd
+    mn <- object$posthoc$mean[linearidx]
+    sd = sqrt(object$posthoc$variance[linearidx])
+    summarytablefixed <- data.frame(
+      mean = mn,
+      sd = sd,
+      q2.5 = stats::qnorm(.025,mean = mn,sd = sd),
+      q97.5 = stats::qnorm(.975,mean = mn,sd = sd)
+    )
+    summarytablefixed$covariate <- colnames(object$modeldata$X)
+  }
+
+  if ("smooth" %in% names(idx)) {
+    smoothidx <- idx$smooth - object$modeldata$Nd
+    # Account for the manually removed one(s)
+    for (x in object$modeldata$vectorofcolumnstoremove) {
+      smoothidx[smoothidx >= x] <- smoothidx[smoothidx >= x] + 1
+    }
+    mn <- stitch_zero_vector(object$posthoc$mean[smoothidx],object$modeldata$vectorofcolumnstoremove)
+    sd = stitch_zero_vector(sqrt(object$posthoc$variance[smoothidx]),object$modeldata$vectorofcolumnstoremove)
+    summarytablerandom <- data.frame(
+      mean = mn,
+      sd = sd,
+      q2.5 = stats::qnorm(.025,mean = mn,sd = sd),
+      q97.5 = stats::qnorm(.975,mean = mn,sd = sd)
+    )
+    # Create the proper rownames
+    covvalues <- purrr::reduce(idx$covvalues,c)
+    covvalues <- stitch_zero_vector(covvalues,object$modeldata$vectorofcolumnstoremove)
+    covnames <- names(idx$smooth)
+    for (nm in names(object$modeldata$vectorofcolumnstoremove)) {
+      covvalues[object$modeldata$vectorofcolumnstoremove[nm]] <- object$modeldata$control$linear_constraints[[nm]]$whichzero[1]
+      if (object$modeldata$vectorofcolumnstoremove[nm] == 1) {
+        covnames <- c(nm,covnames)
+      } else {
+        covnames <- c(covnames[1:(object$modeldata$vectorofcolumnstoremove[nm]-1)],nm,covnames[(object$modeldata$vectorofcolumnstoremove[nm]):length(covnames)])
+      }
+    }
+    summarytablerandom$covariate <- covnames
+    summarytablerandom$covariate_value <- covvalues
+  }
   out <- list(
     call = call,
     summarytablefixed = summarytablefixed,
+    summarytablerandom = summarytablerandom,
     idx = idx
   )
   structure(out,class = "cc_summary")
@@ -142,7 +180,7 @@ print.cc_summary <- function(ccsummary) {
   }
   if ("smooth" %in% names(ccsummary$idx)) {
     cat("\n\nRandom effects:\n")
-    print(ccsummary$summarytablefixed)
+    print(ccsummary$summarytablerandom)
   }
 }
 
@@ -183,6 +221,25 @@ plot.cc_fit <- function(x,...) {
         ggplot2::theme(text = ggplot2::element_text(size = 12))
 
       plotlist$linear[[nm]] <- plt
+    }
+  }
+
+  if ("smooth" %in% names(idx)) {
+    plotlist$smooth <- list()
+    summ <- summary(x)
+    covs <- summ$summarytablerandom$covariate %>% unique()
+    for (nm in covs) {
+      vals <- sort(unique(x$modeldata$control$linear_constraints[[nm]]$u))
+      plt <- summ$summarytablerandom %>%
+        dplyr::filter(.data[["covariate"]] == nm) %>%
+        dplyr::mutate(x = vals) %>%
+        ggplot2::ggplot(ggplot2::aes(x = .data[["x"]])) +
+        ggplot2::theme_classic() +
+        ggplot2::geom_line(ggplot2::aes(y = .data[["mean"]])) +
+        ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[["q2.5"]],ymax = .data[["q97.5"]]),colour = "lightgrey",alpha = .1) +
+        ggplot2::labs(title = "",x = nm,y = "Posterior mean and 95% CI")
+
+      plotlist$smooth[[nm]] <- plt
     }
   }
   structure(plotlist,class = c("cc_plot","list"))

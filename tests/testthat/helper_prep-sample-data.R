@@ -1,6 +1,6 @@
 # Create example data for use in testthat tests.
 
-
+# TODO: there aren't any test cases for smooth models without linear constraints.
 
 sampledata <- dplyr::tibble(
   id = c(1,1,1,2,2),

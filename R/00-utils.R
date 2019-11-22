@@ -94,6 +94,8 @@ cc_default_control <- function() {
   list(
     smooth_prior = list(),
     linear_constraints = list(),
+    doparallel = TRUE,
+    thetaaccuracy = 3,
     beta_prior_logprec = log(1/10),
     opt_control = list(
       prec = 1e-08,

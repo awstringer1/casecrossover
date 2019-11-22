@@ -61,9 +61,9 @@ test_that("Optimization works for a single theta",{
 
 test_that("Parallel optimization of theta works",{
   # Theta formatting
-  expect_error(optimize_all_thetas_parallel(c(1,2),model_data1)) # Not a list
-  expect_error(optimize_all_thetas_parallel(list(c("a"),c("b")),model_data1)) # Not a list of numeric vectors
-  expect_error(optimize_all_thetas_parallel(list(c(1),c(1,2)),model_data1)) # Different lengths
+  expect_error(optimize_all_thetas_parallel(c(1,2),model_data1)) # Not a NIGrid
+  expect_error(optimize_all_thetas_parallel(list(c("a"),c("b")),model_data1))
+  expect_error(optimize_all_thetas_parallel(list(c(1),c(1,2)),model_data1))
 
   expect_s3_class(opt_1,"tbl_df")
   expect_s3_class(opt_2,"tbl_df")

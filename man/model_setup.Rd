@@ -20,6 +20,9 @@ containing covariates.}
 \item{verbose}{Logical. Print progress and diagnostic information? Useful for debugging or
 keeping up with what the function is doing.}
 }
+\value{
+An object of class cc_modeldata, for passing into future functions.
+}
 \description{
 Set up a casecrossover model for fitting: creates all internal objects and stores them in a list with class "cc_model_data".
 May contain standard linear terms "x" parsable

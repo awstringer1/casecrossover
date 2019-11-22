@@ -96,8 +96,8 @@ test_that("Linear constraints created as expected",{
 
 test_that("Model data created correctly",{
   # Make sure the function actually returns something
-  expect_s3_class(model_data1,"ccmodeldata")
-  expect_s3_class(model_data2,"ccmodeldata")
+  expect_s3_class(model_data1,"cc_modeldata")
+  expect_s3_class(model_data2,"cc_modeldata")
   # Make sure the formula parsing rejects incorrect formulae
   expect_error(model_setup(case1 ~ x,sampledata)) # No strata
   expect_error(model_setup(case1 ~ f(x))) # Wrong elements

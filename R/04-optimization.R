@@ -123,7 +123,7 @@ optimize_all_thetas_parallel <- function(thetagrid,model_data,hessian_structure 
   if (length(unique(thetalengths)) != 1) stop("Make sure all thetas are the same length.")
 
   if (is.null(optcontrol)) {
-    optcontrol <- cc_control()$opt_control
+    optcontrol <- model_data$control$opt_control
   }
 
   do_opt <- function(theta) {

@@ -514,7 +514,7 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
 
   }
   if (nrow(margmeans) == 1) {
-    finalmeans <- as.numeric(margmeans)[i]
+    finalmeans <- as.numeric(margmeans)[idx]
     finalvars <- as.numeric(margvars)
     finallincombvars <- NULL
     if (!is.null(lincomb)) finallincombvars <- as.numeric(lincombvars)
@@ -533,7 +533,6 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
   # back in!
   if (!is.null(model_data$vectorofcolumnstoremove)) {
     if (!all(model_data$vectorofcolumnstoremove == 0)) {
-
       finalmeans <- stitch_zero_vector(finalmeans,model_data$vectorofcolumnstoremove)
       finalvars <- stitch_zero_vector(finalvars,model_data$vectorofcolumnstoremove)
     }

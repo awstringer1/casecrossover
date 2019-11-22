@@ -265,3 +265,27 @@ posthoc10 <- compute_marginal_means_and_variances(logpost10,model_data10)
 posthoc11 <- compute_marginal_means_and_variances(logpost11,model_data11)
 posthoc13 <- compute_marginal_means_and_variances(logpost13,model_data13)
 
+# Case crossover!
+sink("./tmpoutput07687")
+cc1 <- casecrossover(case1 ~ x + strata(id),sampledata)
+cc2 <- casecrossover(case2 ~ x + strata(id),sampledata)
+
+cc3 <- casecrossover(case1 ~ s(x) + strata(id),sampledata,controlsmooth)
+cc4 <- casecrossover(case2 ~ s(x) + strata(id),sampledata,controlsmooth)
+
+cc5 <- casecrossover(case1 ~ x + s(x) + strata(id),sampledata,controlsmooth)
+cc6 <- casecrossover(case2 ~ x + s(x) + strata(id),sampledata,controlsmooth)
+
+cc7 <- casecrossover(case1 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
+cc8 <- casecrossover(case2 ~ s(x) + s(x2) + strata(id),sampledata,controlsmooth2)
+
+# cc9 <- casecrossover(case1 ~ s(x) + s(x2) + poly(x,2,raw = TRUE) + poly(x2,3,raw=TRUE) + strata(id),sampledata,controlsmooth2)
+cc10 <- casecrossover(case2 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth2)
+
+cc11 <- casecrossover(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth3)
+
+cc13 <- casecrossover(case1 ~ s(x) + s(x2) + poly(x,2) + poly(x2,3) + strata(id),sampledata,controlsmooth4)
+file.remove("./tmpoutput07687")
+sink()
+
+

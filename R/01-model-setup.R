@@ -363,13 +363,15 @@ validate_linear_constraints <- function(constraints,verbose = TRUE) {
 #' @param verbose Logical. Print progress and diagnostic information? Useful for debugging or
 #' keeping up with what the function is doing.
 #'
+#' @return An object of class cc_modeldata, for passing into future functions.
+#'
 #' @examples
 #' model_setup(y~x + strata(id),data.frame(y = c(0,1),x = c(1,2),id = c(1,1)))
 #'
 #' @export
 # model_setup <- function(formula,data,control = cc_control(smooth_prior = pc_prior(3,.5))) {}
 model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
-  model_data <- structure(list(), class = "ccmodeldata")
+  model_data <- structure(list(), class = "cc_modeldata")
 
   # Parse the formula
   model_elements <- parse_formula(formula)

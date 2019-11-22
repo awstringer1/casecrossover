@@ -85,3 +85,106 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
   )
   structure(out,class = "cc_fit")
 }
+
+#' Summarize results of a casecrossover fit.
+#'
+#' @method summary cc_fit
+#'
+#' @description Generic summary method for a cc_fit object returned by casecrossover(). Prints similar
+#' information to the familiar lm() and glm() summary functions, or inla().
+#'
+#' @param object Object of class cc_fit returned by casecrossover().
+#' @param ... Not used
+#'
+#' @return A list of summary information of class cc_summary, with a print method.
+#'
+#' @export
+#'
+summary.cc_fit <- function(object,...) {
+  idx <- get_indices(object$modeldata)
+
+  call <- object$modeldata$model_elements$call
+
+  summarytablefixed <- data.frame(
+    mean = object$posthoc$mean,
+    sd = sqrt(object$posthoc$variance),
+    q2.5 = stats::qnorm(.025,mean = object$posthoc$mean,sd = sqrt(object$posthoc$variance)),
+    q97.5 = stats::qnorm(.975,mean = object$posthoc$mean,sd = sqrt(object$posthoc$variance))
+  )
+  rownames(summarytablefixed) <- colnames(object$modeldata$X)
+  out <- list(
+    call = call,
+    summarytablefixed = summarytablefixed,
+    idx = idx
+  )
+  structure(out,class = "cc_summary")
+}
+
+# summary(pollutioncc)
+
+#' Print method for summary.cc_fit.
+#'
+#'
+#' @description Generic print method for a cc_fit summary object. Not exported, user will call this function
+#' by simply typing summary(...) in the console, like normal.
+#'
+#' @param ccsummary An object of class cc_summary, output by summary().
+#'
+#' @return Nothing.
+#'
+print.cc_summary <- function(ccsummary) {
+  cat("Call:\n")
+  print(ccsummary$call)
+
+  if ("linear" %in% names(ccsummary$idx)) {
+    cat("\n\nFixed effects:\n")
+    print(ccsummary$summarytablefixed)
+  }
+  if ("smooth" %in% names(ccsummary$idx)) {
+    cat("\n\nRandom effects:\n")
+    print(ccsummary$summarytablefixed)
+  }
+}
+
+#' Plot results of fitting a case crossover model.
+#'
+#' @method plot cc_fit
+#'
+#' @description Plots corresponding to a case crossover model. This function computes histograms of
+#' fixed-effect posteriors and smooth curves with pointwise error bars (+- 2sd) based on the marginal
+#' posteriors of the smooth effects.
+#'
+#' @param x Object of class cc_fit returned by casecrossover().
+#' @param ... Not used.
+#'
+#' @return A named list of lists of ggplots, one for the fixed effects and one for the smooth.
+#' Only mimimal annotations are made; you can put your own titles and axis labels and further change the plot
+#' features using the ggplot2 API. The plot lists themselves can be passed directly to cowplot::plot_grid,
+#' or further annotated by you.
+#'
+#' @export
+#'
+plot.cc_fit <- function(x,...) {
+  idx <- get_indices(x$modeldata)
+
+  plotlist <- list()
+
+  if ("linear" %in% names(idx)) {
+    linearidx <- idx$linear - x$modeldata$Nd
+    plotlist$linear <- list()
+    for (nm in names(idx$linear)) {
+      mn <- x$posthoc$mean[linearidx[nm]]
+      sd <- sqrt(x$posthoc$variance[linearidx[nm]])
+      plt <- dplyr::tibble(x = c(mn - 3.5*sd,mn + 3.5*sd)) %>%
+        ggplot2::ggplot(ggplot2::aes(x = .data[["x"]])) +
+        ggplot2::theme_classic() +
+        ggplot2::stat_function(fun = stats::dnorm,args = list(mean = mn,sd = sd)) +
+        ggplot2::labs(title = "",x = nm,y = "density") +
+        ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+      plotlist$linear[[nm]] <- plt
+    }
+  }
+  structure(plotlist,class = c("cc_plot","list"))
+}
+

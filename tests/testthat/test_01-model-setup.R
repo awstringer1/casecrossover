@@ -18,7 +18,7 @@ test_that("Vector stitching works as expected",{
   expect_equal(stitch_zero_vector(1:100,c(10,50,90:100))[-c(10,50,90:100)],1:100)
 })
 
-PARSELENGTH <- 5
+PARSELENGTH <- 6
 test_that("Formula parsing works as expected",{
   expect_error(parse_formula(y ~ f(x)))
   expect_error(parse_formula(y ~ x + s(z))) # No strata

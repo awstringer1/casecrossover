@@ -8,6 +8,7 @@ parse_formula <- function(ff) {
   # Linear terms will be passed to model.matrix()
   # Smooth terms will be handled in a proprietary manner
   # The strata argument must be provided.
+  fullff <- ff # Save the input formula for later printing.
 
   # Grab the RHS elements of the formula
   ff_elements <- attributes(terms(ff))$term.labels
@@ -60,7 +61,8 @@ parse_formula <- function(ff) {
     linear_formula = ff,
     smooth = smooth,
     strata = strata,
-    response = response
+    response = response,
+    call = fullff
   )
 }
 

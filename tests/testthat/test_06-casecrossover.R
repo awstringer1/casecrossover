@@ -32,3 +32,14 @@ test_that("Case crossover works as expected!",{
   expect_length(cc11,OUTPUTLENGTH)
   expect_length(cc13,OUTPUTLENGTH)
 })
+
+test_that("S3 generics work as expected",{
+  expect_s3_class(summary(cc1),"cc_summary")
+  expect_s3_class(summary(cc2),"cc_summary")
+
+  expect_s3_class(plot(cc1),c("cc_plot","list"))
+  expect_s3_class(plot(cc2),c("cc_plot","list"))
+
+
+
+})

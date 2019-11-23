@@ -18,8 +18,106 @@ knitr::opts_chunk$set(
 library(casecrossover)
 ```
 
-Welcome to the vignette for the \texttt{casecrossover} package! This package is in beta, and all user feedback is highly welcome.
+Welcome to the vignette for the `casecrossover` package! This package is in beta, and all user feedback is highly welcome.
 
 # Basic use
 
-The package contains the function `casecrossover` which has a formula interface and returns an object with `summary` and `plot` methods
+The package contains the function `casecrossover` which has a formula interface and returns an object with `summary` and `plot` methods. It also
+contains a small API for specifying priors on the smooth terms, and linear constraints.
+
+Downlaod and install the package from github as follows:
+
+```{r download}
+# devtools::install_github("awstringer1/casecrossover")
+library(casecrossover)
+```
+
+The package depends on a number of `tidyverse` packages, notable `dplyr`, `ggplot2` and `purrr`. I prefer to just install the whole `tidyverse`, but `casecrossover` does not formally depend on the whole `tidyverse`, so you don't have to.
+
+## Example: simulated data
+
+The `casecrossover` package contains a dataset simulated from a case crossover model:
+
+```{r load-data}
+data("sim1data")
+head(sim1data)
+```
+
+We will fit a case-crossover model with the following additive predictor: denoting exposure by $u_{i}(t)$,
+\begin{equation}
+\eta_{i}(t) = \gamma(u_{i}(t))
+\end{equation}
+where $\gamma(\cdot)$ is some unknown smooth function of exposure that we wish to infer. We place a RW2 prior on $\gamma$, and a PC prior on the
+log-smoothing precision of this RW2, with parameters $u = 3$ and $\alpha = .75$. We impose the constraint that $\gamma(0.5) = 0$.
+
+In order to do all of this, we need only the following code:
+
+```{r fit-cc-1,cache = TRUE}
+# Specify the control parameters
+# See ?cc_control for information.
+smoothcontrol <- cc_control(
+  smooth_prior = list(pc_prior(3,.75)), # PC prior on log-smoothing precision
+  linear_constraints = create_linear_constraints(u = sim1data$exposure_binned,
+                                                 whichzero = 0.5,
+                                                 nm = "exposure_binned"), # Constaint that gamma(0.5) = 0
+  thetaaccuracy = 50, # Set the accuracy of the theta integration- see ?cc_control
+  sparsetheta = FALSE, # Use a dense/full grid for integrating theta
+  thetarange = c(-10,10)) # Integrate theta from -10 to 10
+
+# Fit the model.
+# Use s() to specify smooth terms. Match the name of your covariate to the name of the prior in smooth_prior above.
+# Include a strata() term to indicate which records belong to the same subject.
+simcc <- casecrossover::casecrossover(
+  case ~ s(exposure_binned) + strata(subject),
+  data = sim1data,
+  control = smoothcontrol,
+  verbose = TRUE
+)
+```
+
+This works in the following way:
+
+\begin{enumerate}
+\item Specify that `subject` is your grouping variable using `strata(subject)`. Specify a smooth term for exposure_binned using `s(exposure_binned)`.
+\item Specify a PC prior with parameters $u = 3$ and $\alpha = .75$ using `smooth_prior = list(pc_prior(3,.75))` inside `cc_control()`. See `?cc_control` and `?pc_prior` for information.
+\item Specify a constraint that `\gamma(0.5) = 0` using `create_linear_constraints()`.
+\item Specify the aspects of the theta integration inside `cc_control`, see `?cc_control`. In this case we used a dense grid with $50$ points over $(-10,10)$.
+\end{enumerate}
+
+We can inspect the resulting `cc_fit` object:
+
+```{r summary-cc-1}
+names(simcc)
+simcc$posthoc
+simcc$optimization
+names(simcc$modeldata)
+```
+
+You can use the more user-friendly S3 methods though:
+
+```{r summary-cc-2}
+summary(simcc)
+
+pltcc <- plot(simcc)
+names(pltcc)
+pltcc$smooth
+pltcc$hyperparameters$theta
+pltcc$hyperparameters$sigma
+```
+
+The following key elements still need to be implemented:
+
+\begin{enumerate}
+\item The method right now can handle multiple smooth terms (and hence multidimensional $\theta$), but
+I still need to implement summary quantities based on the marginal distributions $\theta_{j}$, which
+requires some quadrature stuff I haven't worked out yet. So if you use multiple smooth terms it will work and
+the covariate effect plots will be available for each term, but the hyperparameter summaries aren't yet.
+\item Further testing of models with both linear and smooth terms. Currently the simulation here breaks with
+a formula of `case ~ exposure_binned + s(exposure_binned)`, and I'm not sure why yet.
+\item Outputting proper covariate effect plots for models with both linear and smooth terms; currently only plots
+of linear and smooth terms separately are computed, but if you have the same covariate as linear and smooth, you
+want a plot of the linear combination. I have the marginal variances computed correctly, so I just need to compute
+the marginal means and make the plot.
+\end{enumerate}
+
+

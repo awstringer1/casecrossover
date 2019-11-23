@@ -61,7 +61,13 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
     thetagrid <- mvQuad::createNIGrid(dim = 1,type = "GLe",level = 1)
   } else {
     thetagrid <- mvQuad::createNIGrid(dim = K,type = "GLe",level = model_data$control$thetaaccuracy)
-    mvQuad::rescale(thetagrid,domain = matrix(c(rep(-10,K),rep(10,K)),ncol=K))
+    if (is.matrix(model_data$control$thetarange)) {
+      mvQuad::rescale(thetagrid,domain = model_data$control$thetarange)
+    } else if (is.numeric(model_data$control$thetarange)) {
+      mvQuad::rescale(thetagrid,domain = matrix(rep(model_data$control$thetarange,2),ncol = 2,byrow = TRUE))
+    } else {
+      stop("Specify thetarange either as a matrix with 2 columns, or as a vector of length dim(theta).")
+    }
   }
 
   # Optimization
@@ -73,13 +79,15 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
 
   # Post-hoc quantities
   if (verbose) cat("Computing post-hoc quantities...\n")
-  posthoc <- compute_marginal_means_and_variances(opt,model_data)
+  # Add log posterior values before computing means/variances, so they can be returned.
+  optwithlogpost <- add_log_posterior_values(opt,model_data) %>% normalize_optresults_logpost()
+  posthoc <- compute_marginal_means_and_variances(optwithlogpost,model_data)
 
   # Build final output object, for plotting and printing etc.
   if (verbose) cat("Building output object...\n")
   out <- list(
     posthoc = posthoc,
-    optimization = opt,
+    optimization = optwithlogpost,
     thetagrid = thetagrid,
     modeldata = model_data
   )
@@ -105,7 +113,7 @@ summary.cc_fit <- function(object,...) {
 
   call <- object$modeldata$model_elements$call
 
-  summarytablefixed <- summarytablerandom <- NULL
+  summarytablefixed <- summarytablerandom <- summarytablehyper <- NULL
 
   if ("linear" %in% names(idx)) {
     linearidx <- idx$linear - object$modeldata$Nd
@@ -121,6 +129,7 @@ summary.cc_fit <- function(object,...) {
   }
 
   if ("smooth" %in% names(idx)) {
+    # Random effect summary
     smoothidx <- idx$smooth - object$modeldata$Nd
     # Account for the manually removed one(s)
     for (x in object$modeldata$vectorofcolumnstoremove) {
@@ -148,11 +157,30 @@ summary.cc_fit <- function(object,...) {
     }
     summarytablerandom$covariate <- covnames
     summarytablerandom$covariate_value <- covvalues
+
+    # Hyperparameter summary
+    ww <- mvQuad::getWeights(attr(object$optimization,"thetagrid"))[ ,1]
+    thetamean <- apply(ww * purrr::reduce(object$optimization$theta,rbind) * exp(object$optimization$theta_logposterior),2,sum)
+    sigmamean <- apply(ww * purrr::reduce(object$optimization$sigma,rbind) * exp(object$optimization$sigma_logposterior),2,sum)
+    thetasd <- sqrt(apply(ww * (purrr::reduce(object$optimization$theta,rbind) - thetamean)^2 * exp(object$optimization$theta_logposterior),2,sum))
+    sigmasd <- sqrt(apply(ww * (purrr::reduce(object$optimization$sigma,rbind) - sigmamean)^2 * exp(object$optimization$sigma_logposterior),2,sum))
+
+    # Quantiles... annoying.
+    # TODO: implement this, tricky in multiple dimensions.
+
+    summarytablehyper <- data.frame(
+      covariate = rep(unique(names(idx$smooth)),2),
+      variable = rep(c("theta","sigma"),each = length(unique(names(idx$smooth)))),
+      mean = c(thetamean,sigmamean),
+      sd = c(thetasd,sigmasd)
+    ) %>%
+      dplyr::arrange(.data[["covariate"]],.data[["variable"]])
   }
   out <- list(
     call = call,
     summarytablefixed = summarytablefixed,
     summarytablerandom = summarytablerandom,
+    summarytablehyper = summarytablehyper,
     idx = idx
   )
   structure(out,class = "cc_summary")
@@ -181,6 +209,8 @@ print.cc_summary <- function(ccsummary) {
   if ("smooth" %in% names(ccsummary$idx)) {
     cat("\n\nRandom effects:\n")
     print(ccsummary$summarytablerandom)
+    cat("\n\nHyperparameter(s):\n")
+    print(ccsummary$summarytablehyper)
   }
 }
 
@@ -225,6 +255,7 @@ plot.cc_fit <- function(x,...) {
   }
 
   if ("smooth" %in% names(idx)) {
+    # Plot the posterior covariate effects
     plotlist$smooth <- list()
     summ <- summary(x)
     covs <- summ$summarytablerandom$covariate %>% unique()
@@ -237,9 +268,57 @@ plot.cc_fit <- function(x,...) {
         ggplot2::theme_classic() +
         ggplot2::geom_line(ggplot2::aes(y = .data[["mean"]])) +
         ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[["q2.5"]],ymax = .data[["q97.5"]]),colour = "lightgrey",alpha = .1) +
-        ggplot2::labs(title = "",x = nm,y = "Posterior mean and 95% CI")
+        ggplot2::labs(title = "",x = nm,y = "Posterior mean and 95% CI") +
+        ggplot2::theme(text = ggplot2::element_text(size = 12))
 
       plotlist$smooth[[nm]] <- plt
+    }
+    # Theta and sigma posteriors
+    plotlist$hyperparameters <- list()
+    # TODO: implement multidimensional quadrature for the marginals
+    if (length(unique(names(idx$smooth))) == 1) {
+      plotlist$hyperparameters$theta[[nm]] <- dplyr::tibble(
+        xx = purrr::reduce(x$optimization$theta,rbind),
+        y = exp(x$optimization$theta_logposterior)
+      ) %>%
+        ggplot2::ggplot(ggplot2::aes(x = .data[["xx"]],y = .data[["y"]])) +
+        ggplot2::theme_classic() +
+        ggplot2::geom_line() +
+        ggplot2::labs(title = "",x = "theta",y = "density") +
+        ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+      plotlist$hyperparameters$sigma[[nm]] <- dplyr::tibble(
+        xx = purrr::reduce(x$optimization$sigma,rbind),
+        y = exp(x$optimization$sigma_logposterior)
+      ) %>%
+        ggplot2::ggplot(ggplot2::aes(x = .data[["xx"]],y = .data[["y"]])) +
+        ggplot2::theme_classic() +
+        ggplot2::geom_line() +
+        ggplot2::labs(title = "",x = "sigma",y = "density") +
+        ggplot2::theme(text = ggplot2::element_text(size = 12))
+    } else {
+      # for (nm in unique(names(idx$smooth))) {
+      #   whichcol <- which(unique(names(idx$smooth)) == nm)
+      #   plotlist$hyperparameters$theta[[nm]] <- dplyr::tibble(
+      #     xx = purrr::reduce(x$optimization$theta,rbind)[ ,whichcol],
+      #     y = exp(x$optimization$theta_logposterior)
+      #   ) %>%
+      #     ggplot2::ggplot(ggplot2::aes(x = .data[["xx"]],y = .data[["y"]])) +
+      #     ggplot2::theme_classic() +
+      #     ggplot2::geom_line() +
+      #     ggplot2::labs(title = "",x = "theta",y = "density") +
+      #     ggplot2::theme(text = ggplot2::element_text(size = 12))
+      #
+      #   plotlist$hyperparameters$sigma[[nm]] <- dplyr::tibble(
+      #     xx = purrr::reduce(x$optimization$sigma,rbind)[ ,whichcol],
+      #     y = exp(x$optimization$sigma_logposterior)
+      #   ) %>%
+      #     ggplot2::ggplot(ggplot2::aes(x = .data[["xx"]],y = .data[["y"]])) +
+      #     ggplot2::theme_classic() +
+      #     ggplot2::geom_line() +
+      #     ggplot2::labs(title = "",x = "sigma",y = "density") +
+      #     ggplot2::theme(text = ggplot2::element_text(size = 12))
+      # }
     }
   }
   structure(plotlist,class = c("cc_plot","list"))

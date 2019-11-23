@@ -98,6 +98,8 @@ cc_default_control <- function() {
     linear_constraints = list(),
     doparallel = TRUE,
     thetaaccuracy = 3,
+    sparsetheta = FALSE,
+    thetarange = c(-1,1),
     beta_prior_logprec = log(1/10),
     opt_control = list(
       prec = 1e-08,
@@ -203,7 +205,6 @@ normalize_log_posterior_multiple <- function(pp,tt) {
 # }
 #
 # normalize_log_posterior_multiple(pp,tt) # Should be zero, i.e. log(1)
-
 
 # INTERNAL: take a vector of values, a vector of indices, and return a vector
 # containing the values of the first with zeroes spliced in at the indices

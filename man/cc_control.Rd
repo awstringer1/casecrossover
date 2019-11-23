@@ -28,7 +28,22 @@ input a named list of vectors. The name of the list is the name of the covariate
 want the constraint on. The length of the vector should be equal to the number of unique
 values of this covariate. The vector should satisfy a^T u = 0, where a is the vector and
 u is a SORTED (ascending) vector of unique covariate values. For help creating this list,
-see create_linear_combinations().
+see create_linear_constraints().
+
+thetaaccuracy: the accuracy of the grid used for numerical integration. If there are K hyperparameters
+(dim(theta) = K), then thetaaccuracy^K regular gridpoints will be used. Default is 3, which is
+probably too low.
+
+sparsetheta: logical. Use a sparse grid for the numerical integration of theta? This can dramatically
+speed up computation time. Default FALSE.
+
+thetarange: numeric vector or matrix specifying the range of numerical integration for theta. If a vector,
+give a lower and upper endpoint; if dim(theta) > 1 then these are recycled, creating a cube. If dim(theta) > 1
+you can also specify a rectangle by giving a matrix with one column for the lower end points and one for the
+upper.
+
+optcontrol: control parameters passed to trustOptim::trust.optim(). See their vignette, which is excellent.
+However, the defaults here are probably fine for most problems.
 }
 \examples{
 cc_control(smooth_prior = list(z = list(prior = "pc_prec",params = c(u = 3,a = 1))))

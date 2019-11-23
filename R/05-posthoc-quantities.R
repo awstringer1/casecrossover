@@ -73,7 +73,15 @@ normalize_log_posterior <- function(pp,tt) {
 normalize_optresults_logpost <- function(optresults) {
   thetanormconst <- normalize_log_posterior(optresults$theta_logposterior,attributes(optresults)$thetagrid)
   optresults$theta_logposterior <- optresults$theta_logposterior - thetanormconst
-  optresults
+
+  out <- optresults %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(sigma = list(exp(-.5 * unlist(.data[["theta"]]))),
+                  sigma_logposterior = length(unlist(.data[["sigma"]])) * log(2) - sum(log(unlist(.data[["sigma"]]))) + .data[["theta_logposterior"]])
+
+  attr(out,"thetagrid") <- attributes(optresults)$thetagrid
+
+  out
 }
 
 #' Helper function to return the correct indices for latent variables

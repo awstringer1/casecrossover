@@ -64,7 +64,7 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
     if (is.matrix(model_data$control$thetarange)) {
       mvQuad::rescale(thetagrid,domain = model_data$control$thetarange)
     } else if (is.numeric(model_data$control$thetarange)) {
-      mvQuad::rescale(thetagrid,domain = matrix(rep(model_data$control$thetarange,2),ncol = 2,byrow = TRUE))
+      mvQuad::rescale(thetagrid,domain = matrix(rep(model_data$control$thetarange,K),ncol = K,byrow = TRUE))
     } else {
       stop("Specify thetarange either as a matrix with 2 columns, or as a vector of length dim(theta).")
     }
@@ -82,6 +82,15 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
   # Add log posterior values before computing means/variances, so they can be returned.
   optwithlogpost <- add_log_posterior_values(opt,model_data) %>% normalize_optresults_logpost()
   posthoc <- compute_marginal_means_and_variances(optwithlogpost,model_data)
+
+  # If we removed columns from the precision matrix, we added the appropriate zeroes back in inside
+  # compute_marginal_means_and_variances(). So now, update the dimensions
+  # if (!is.null(model_data$vectorofcolumnstoremove)) {
+  #   ll <- length(model_data$vectorofcolumnstoremove)
+  #   model_data$M <- model_data$M + ll
+  #   model_data$Wd <- model_data$Nd + model_data$M + model_data$p
+  #   # model_data$vectorofcolumnstoremove <- NULL # No longer needed
+  # }
 
   # Build final output object, for plotting and printing etc.
   if (verbose) cat("Building output object...\n")
@@ -109,11 +118,11 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
 #' @export
 #'
 summary.cc_fit <- function(object,...) {
-  idx <- get_indices(object$modeldata)
+  idx <- get_indices(object$modeldata,removezeros = FALSE)
 
   call <- object$modeldata$model_elements$call
 
-  summarytablefixed <- summarytablerandom <- summarytablehyper <- NULL
+  summarytablefixed <- summarytablerandom <- summarytablelincomb <- summarytablehyper <- NULL
 
   if ("linear" %in% names(idx)) {
     linearidx <- idx$linear - object$modeldata$Nd
@@ -131,12 +140,15 @@ summary.cc_fit <- function(object,...) {
   if ("smooth" %in% names(idx)) {
     # Random effect summary
     smoothidx <- idx$smooth - object$modeldata$Nd
-    # Account for the manually removed one(s)
-    for (x in object$modeldata$vectorofcolumnstoremove) {
-      smoothidx[smoothidx >= x] <- smoothidx[smoothidx >= x] + 1
-    }
-    mn <- stitch_zero_vector(object$posthoc$mean[smoothidx],object$modeldata$vectorofcolumnstoremove)
-    sd = stitch_zero_vector(sqrt(object$posthoc$variance[smoothidx]),object$modeldata$vectorofcolumnstoremove)
+    # # Account for the manually removed one(s)
+    # for (x in object$modeldata$vectorofcolumnstoremove) {
+    #   smoothidx[smoothidx >= x] <- smoothidx[smoothidx >= x] + 1
+    # }
+    # mn <- stitch_zero_vector(object$posthoc$mean[smoothidx],object$modeldata$vectorofcolumnstoremove)
+    # sd = stitch_zero_vector(sqrt(object$posthoc$variance[smoothidx]),object$modeldata$vectorofcolumnstoremove)
+    mn <- object$posthoc$mean[smoothidx]
+    sd <- sqrt(object$posthoc$variance[smoothidx])
+
     summarytablerandom <- data.frame(
       mean = mn,
       sd = sd,
@@ -145,16 +157,16 @@ summary.cc_fit <- function(object,...) {
     )
     # Create the proper rownames
     covvalues <- purrr::reduce(idx$covvalues,c)
-    covvalues <- stitch_zero_vector(covvalues,object$modeldata$vectorofcolumnstoremove)
+    # covvalues <- stitch_zero_vector(covvalues,object$modeldata$vectorofcolumnstoremove)
     covnames <- names(idx$smooth)
-    for (nm in names(object$modeldata$vectorofcolumnstoremove)) {
-      covvalues[object$modeldata$vectorofcolumnstoremove[nm]] <- object$modeldata$control$linear_constraints[[nm]]$whichzero[1]
-      if (object$modeldata$vectorofcolumnstoremove[nm] == 1) {
-        covnames <- c(nm,covnames)
-      } else {
-        covnames <- c(covnames[1:(object$modeldata$vectorofcolumnstoremove[nm]-1)],nm,covnames[(object$modeldata$vectorofcolumnstoremove[nm]):length(covnames)])
-      }
-    }
+    # for (nm in names(object$modeldata$vectorofcolumnstoremove)) {
+    #   covvalues[object$modeldata$vectorofcolumnstoremove[nm]] <- object$modeldata$control$linear_constraints[[nm]]$whichzero[1]
+    #   if (object$modeldata$vectorofcolumnstoremove[nm] == 1) {
+    #     covnames <- c(nm,covnames)
+    #   } else {
+    #     covnames <- c(covnames[1:(object$modeldata$vectorofcolumnstoremove[nm]-1)],nm,covnames[(object$modeldata$vectorofcolumnstoremove[nm]):length(covnames)])
+    #   }
+    # }
     summarytablerandom$covariate <- covnames
     summarytablerandom$covariate_value <- covvalues
 
@@ -176,11 +188,25 @@ summary.cc_fit <- function(object,...) {
     ) %>%
       dplyr::arrange(.data[["covariate"]],.data[["variable"]])
   }
+
+  if (!is.null(object$posthoc$lincombvars)) {
+    # Linear combinations mean and variance
+    lincombmatrix <- make_model_lincombs(object$modeldata) # This now correctly reflects the presence of the added-back zeroes
+    summarytablelincomb <- cbind(
+      as.numeric(t(lincombmatrix[(nrow(lincombmatrix) - length(object$posthoc$mean) + 1):nrow(lincombmatrix), ]) %*% cbind(object$posthoc$mean)),
+      sqrt(object$posthoc$lincombvars)
+    ) %>% as.data.frame()
+    colnames(summarytablelincomb) <- c("mean","sd")
+    summarytablelincomb$covariate <- covnames
+    summarytablelincomb$covariate_value <- covvalues
+  }
+
   out <- list(
     call = call,
     summarytablefixed = summarytablefixed,
     summarytablerandom = summarytablerandom,
     summarytablehyper = summarytablehyper,
+    summarytablelincomb = summarytablelincomb,
     idx = idx
   )
   structure(out,class = "cc_summary")
@@ -212,6 +238,15 @@ print.cc_summary <- function(ccsummary) {
     cat("\n\nHyperparameter(s):\n")
     print(ccsummary$summarytablehyper)
   }
+
+  if (!is.null(ccsummary$summarytablelincomb)) {
+    if (nrow(ccsummary$summarytablelincomb) > 10) {
+      cat("\n\nSuppressing printing of linear combinations due to size. Access them with summary(...)$summarytablelincomb.\n")
+    } else {
+      cat("\n\nLinear combinations:\n")
+      print(ccsummary$summarytablelincomb)
+    }
+  }
 }
 
 #' Plot results of fitting a case crossover model.
@@ -233,9 +268,11 @@ print.cc_summary <- function(ccsummary) {
 #' @export
 #'
 plot.cc_fit <- function(x,...) {
-  idx <- get_indices(x$modeldata)
+  idx <- get_indices(x$modeldata,removezeros = FALSE)
 
   plotlist <- list()
+
+  summ <- summary(x)
 
   if ("linear" %in% names(idx)) {
     linearidx <- idx$linear - x$modeldata$Nd
@@ -257,7 +294,6 @@ plot.cc_fit <- function(x,...) {
   if ("smooth" %in% names(idx)) {
     # Plot the posterior covariate effects
     plotlist$smooth <- list()
-    summ <- summary(x)
     covs <- summ$summarytablerandom$covariate %>% unique()
     for (nm in covs) {
       vals <- sort(unique(x$modeldata$control$linear_constraints[[nm]]$u))
@@ -321,6 +357,27 @@ plot.cc_fit <- function(x,...) {
       # }
     }
   }
+
+  # Linear combinations
+  if (!is.null(x$posthoc$lincombmatrix)) {
+    plotlist$linearcombinations <- list()
+    covs <- summ$summarytablelincomb$covariate %>% unique()
+    for (nm in covs) {
+      vals <- sort(unique(x$modeldata$control$linear_constraints[[nm]]$u))
+      plt <- summ$summarytablelincomb %>%
+        dplyr::filter(.data[["covariate"]] == nm) %>%
+        dplyr::mutate(x = vals) %>%
+        ggplot2::ggplot(ggplot2::aes(x = .data[["x"]])) +
+        ggplot2::theme_classic() +
+        ggplot2::geom_line(ggplot2::aes(y = .data[["mean"]])) +
+        ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[["mean"]] - 2 * .data[["sd"]],ymax = .data[["mean"]] + 2 * .data[["sd"]]),colour = "lightgrey",alpha = .1) +
+        ggplot2::labs(title = "",x = nm,y = "Posterior mean and 95% CI") +
+        ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+      plotlist$linearcombinations[[nm]] <- plt
+    }
+  }
+
   structure(plotlist,class = c("cc_plot","list"))
 }
 

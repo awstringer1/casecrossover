@@ -4,10 +4,13 @@
 \alias{get_indices}
 \title{Helper function to return the correct indices for latent variables}
 \usage{
-get_indices(model_data)
+get_indices(model_data, removezeros = TRUE)
 }
 \arguments{
 \item{model_data}{ccmodeldata object as returned by model_setup().}
+
+\item{removezeros}{Optional. Should the indices be returned with hard-zeroes included or removed from the
+random effect vector? Depends on where this function is being called.}
 }
 \value{
 A list of class ccindex containing vectors of indices for the linear and smooth terms.

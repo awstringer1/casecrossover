@@ -208,6 +208,16 @@ index9 <- get_indices(model_data9)
 index11 <- get_indices(model_data11)
 index13 <- get_indices(model_data13)
 
+index1zeroes <- get_indices(model_data1,removezeros = FALSE)
+index3zeroes <- get_indices(model_data3,removezeros = FALSE)
+index5zeroes <- get_indices(model_data5,removezeros = FALSE)
+index7zeroes <- get_indices(model_data7,removezeros = FALSE)
+index9zeroes <- get_indices(model_data9,removezeros = FALSE)
+index11zeroes <- get_indices(model_data11,removezeros = FALSE)
+index13zeroes <- get_indices(model_data13,removezeros = FALSE)
+
+
+
 
 # Posterior normalization
 # Try some density functions, which integrate to 1 (so log(normconst) == 0)

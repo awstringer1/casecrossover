@@ -95,6 +95,7 @@ test_that("Normalizing the posterior works as expected, actual model objects",{
 
 # Obtaining the correct indices for model terms
 test_that("Obtaining indices works as expected",{
+  # With zeros removed
   expect_s3_class(index1,"ccindex")
   expect_s3_class(index3,"ccindex")
   expect_s3_class(index5,"ccindex")
@@ -122,6 +123,35 @@ test_that("Obtaining indices works as expected",{
 
   expect_equal(index13$linear,c("x" = 10,"x" = 11,"x2" = 12,"x2" = 13,"x2" = 14))
   expect_equal(index13$smooth,c("x" = 4,"x" = 5,"x2" = 6,"x2" = 7,"x2" = 8,"x2" = 9))
+
+  # Without zeros removed
+  expect_s3_class(index1zeroes,"ccindex")
+  expect_s3_class(index3zeroes,"ccindex")
+  expect_s3_class(index5zeroes,"ccindex")
+  expect_s3_class(index7zeroes,"ccindex")
+  expect_s3_class(index9zeroes,"ccindex")
+  expect_s3_class(index11zeroes,"ccindex")
+
+  expect_equal(index1zeroes$linear,c("x" = 4))
+  expect_null(index1zeroes$smooth)
+
+  expect_null(index3zeroes$linear)
+  expect_equal(index3zeroes$smooth,c("x" = 4,"x" = 5,"x" = 6))
+
+  expect_equal(index5zeroes$linear,c("x" = 7))
+  expect_equal(index5zeroes$smooth,c("x" = 4,"x" = 5,"x" = 6))
+
+  expect_null(index7zeroes$linear)
+  expect_equal(index7zeroes$smooth,c("x" = 4,"x" = 5,"x" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10,"x2" = 11))
+
+  expect_equal(index9zeroes$linear,c("x" = 12,"x" = 13,"x2" = 14,"x2" = 15,"x2" = 16))
+  expect_equal(index9zeroes$smooth,c("x" = 4,"x" = 5,"x" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10,"x2" = 11))
+
+  expect_equal(index11zeroes$linear,c("x" = 12,"x" = 13,"x2" = 14,"x2" = 15,"x2" = 16))
+  expect_equal(index11zeroes$smooth,c("x" = 4,"x" = 5,"x" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10,"x2" = 11))
+
+  expect_equal(index13zeroes$linear,c("x" = 12,"x" = 13,"x2" = 14,"x2" = 15,"x2" = 16))
+  expect_equal(index13zeroes$smooth,c("x" = 4,"x" = 5,"x" = 6,"x2" = 7,"x2" = 8,"x2" = 9,"x2" = 10,"x2" = 11))
 })
 
 # Linear combinations
@@ -135,29 +165,36 @@ test_that("Making model linear combinations works as expected",{
   expect_s4_class(make_model_lincombs(model_data5),"sparseMatrix")
   expect_s4_class(make_model_lincombs(model_data9),"sparseMatrix")
 
-  expect_equal(make_model_lincombs(model_data5)[ ,1],c(0,0,0,1,0,2))
-  expect_equal(make_model_lincombs(model_data5)[ ,2],c(0,0,0,0,1,3))
+  expect_equal(make_model_lincombs(model_data5)[ ,1],c(0,0,0,0,0,1))
+  expect_equal(make_model_lincombs(model_data5)[ ,2],c(0,0,0,1,0,2))
+  expect_equal(make_model_lincombs(model_data5)[ ,3],c(0,0,0,0,1,3))
 
-  expect_equal(make_model_lincombs(model_data9)[ ,1],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data9)[ ,2],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data9)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
-  expect_equal(make_model_lincombs(model_data9)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
-  expect_equal(make_model_lincombs(model_data9)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
-  expect_equal(make_model_lincombs(model_data9)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,1],c(0,0,0,0,0,0,0,0,0,1^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data9)[ ,2],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data9)[ ,3],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data9)[ ,4],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,5],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,6],c(0,0,0,0,0,0,0,0,0,0,0,2^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,7],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
+  expect_equal(make_model_lincombs(model_data9)[ ,8],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
 
-  expect_equal(make_model_lincombs(model_data11)[ ,1],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data11)[ ,2],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data11)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
-  expect_equal(make_model_lincombs(model_data11)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
-  expect_equal(make_model_lincombs(model_data11)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
-  expect_equal(make_model_lincombs(model_data11)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,1],c(0,0,0,0,0,0,0,0,0,1^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data11)[ ,2],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data11)[ ,3],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data11)[ ,4],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,5],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,6],c(0,0,0,0,0,0,0,0,0,0,0,2^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,7],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
+  expect_equal(make_model_lincombs(model_data11)[ ,8],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
 
-  expect_equal(make_model_lincombs(model_data13)[ ,1],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data13)[ ,2],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
-  expect_equal(make_model_lincombs(model_data13)[ ,3],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
-  expect_equal(make_model_lincombs(model_data13)[ ,4],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
-  expect_equal(make_model_lincombs(model_data13)[ ,5],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
-  expect_equal(make_model_lincombs(model_data13)[ ,6],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,1],c(0,0,0,0,0,0,0,0,0,1^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data13)[ ,2],c(0,0,0,1,0,0,0,0,0,2^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data13)[ ,3],c(0,0,0,0,1,0,0,0,0,3^(1:2),0,0,0))
+  expect_equal(make_model_lincombs(model_data13)[ ,4],c(0,0,0,0,0,1,0,0,0,0,0,0^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,5],c(0,0,0,0,0,0,1,0,0,0,0,1^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,6],c(0,0,0,0,0,0,0,0,0,0,0,2^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,7],c(0,0,0,0,0,0,0,1,0,0,0,6^(1:3)))
+  expect_equal(make_model_lincombs(model_data13)[ ,8],c(0,0,0,0,0,0,0,0,1,0,0,8^(1:3)))
 })
 
 # Linear constraints

@@ -29,20 +29,39 @@ test_that("Formula parsing works as expected",{
   expect_length(parse_formula(y ~ s(x) + s(z) + strata(id)),PARSELENGTH)
 
   # Polynomial degree
-  expect_equal(get_polynomial_degree(case ~ x),c("x" = 1))
-  expect_equal(get_polynomial_degree(case ~ x + poly(z,2)),c("x" = 1,"z" = 2))
-  expect_equal(get_polynomial_degree(case ~ poly(z,4) + x),c("x" = 1,"z" = 4))
-  expect_equal(get_polynomial_degree(case ~ x + poly(z,2) + poly(zz,3)),c("x" = 1,"z" = 2,"zz" = 3))
-  expect_equal(get_polynomial_degree(case ~ x + s(x)),c("x" = 1))
-  expect_equal(get_polynomial_degree(case ~ x + s(z)),c("x" = 1))
-  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,2)),c("x" = 1,"zz" = 2))
-  expect_equal(get_polynomial_degree(case ~ x1 + x2),c("x1" = 1,"x2" = 1))
-  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,2)),c("x1" = 1,"x2" = 2))
+  expect_equal(get_polynomial_degree(case ~ x + strata(id)),c("x" = 1))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,2) + strata(id)),c("x" = 1,"z" = 2))
+  expect_equal(get_polynomial_degree(case ~ poly(z,4) + x + strata(id)),c("x" = 1,"z" = 4))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,2) + poly(zz,3) + strata(id)),c("x" = 1,"z" = 2,"zz" = 3))
+  expect_equal(get_polynomial_degree(case ~ x + s(x) + strata(id)),c("x" = 1))
+  expect_equal(get_polynomial_degree(case ~ x + s(z) + strata(id)),c("x" = 1))
+  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,2) + strata(id)),c("x" = 1,"zz" = 2))
+  expect_equal(get_polynomial_degree(case ~ x1 + x2 + strata(id)),c("x1" = 1,"x2" = 1))
+  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,2) + strata(id)),c("x1" = 1,"x2" = 2))
 
-  expect_equal(get_polynomial_degree(case ~ poly(z,4,raw = TRUE) + x),c("x" = 1,"z" = 4))
-  expect_equal(get_polynomial_degree(case ~ x + poly(z,2,raw = TRUE) + poly(zz,3,raw = TRUE)),c("x" = 1,"z" = 2,"zz" = 3))
-  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,2,raw = TRUE)),c("x" = 1,"zz" = 2))
-  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,2,raw = TRUE)),c("x1" = 1,"x2" = 2))
+  expect_equal(get_polynomial_degree(case ~ poly(z,4,raw = TRUE) + x + strata(id)),c("x" = 1,"z" = 4))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,2,raw = TRUE) + poly(zz,3,raw = TRUE) + strata(id)),c("x" = 1,"z" = 2,"zz" = 3))
+  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,2,raw = TRUE) + strata(id)),c("x" = 1,"zz" = 2))
+  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,2,raw = TRUE) + strata(id)),c("x1" = 1,"x2" = 2))
+
+  expect_equal(get_polynomial_degree(case ~ poly(z,degree = 4) + x + strata(id)),c("x" = 1,"z" = 4))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,degree = 2) + poly(zz,3) + strata(id)),c("x" = 1,"z" = 2,"zz" = 3))
+  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,degree = 2) + strata(id)),c("x" = 1,"zz" = 2))
+  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,degree = 2) + strata(id)),c("x1" = 1,"x2" = 2))
+
+  expect_equal(get_polynomial_degree(case ~ poly(z,degree = 4,raw = TRUE) + x + strata(id)),c("x" = 1,"z" = 4))
+  expect_equal(get_polynomial_degree(case ~ x + poly(z,degree = 2,raw = TRUE) + poly(zz,3,raw = TRUE) + strata(id)),c("x" = 1,"z" = 2,"zz" = 3))
+  expect_equal(get_polynomial_degree(case ~ x + s(z) + poly(zz,degree = 2,raw = TRUE) + strata(id)),c("x" = 1,"zz" = 2))
+  expect_equal(get_polynomial_degree(case ~ x1 + poly(x2,degree = 2,raw = TRUE) + strata(id)),c("x1" = 1,"x2" = 2))
+
+
+
+  # This one threw a user error...
+  # Turns out it doesn't like underscores in variable names! *shrug*
+  expect_equal(get_polynomial_degree(case ~ exposure_binned + s(exposure_binned) + strata(subject)),c("exposure_binned" = 1))
+  expect_equal(get_polynomial_degree(case ~ poly(exposure_binned,2) + s(exposure_binned) + strata(subject)),c("exposure_binned" = 2))
+  expect_equal(get_polynomial_degree(case ~ poly(exposure_binned,3,raw = TRUE) + s(exposure_binned) + strata(subject)),c("exposure_binned" = 3))
+  expect_equal(get_polynomial_degree(case ~ poly(exposure_binned,degree = 4,raw = TRUE) + s(exposure_binned) + strata(subject)),c("exposure_binned" = 4))
 })
 
 test_that("Priors created as expected",{

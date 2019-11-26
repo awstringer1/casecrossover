@@ -107,12 +107,21 @@ normalize_optresults_logpost <- function(optresults) {
 #' used internally.
 #'
 #' @param model_data ccmodeldata object as returned by model_setup().
+#' @param removezeros Optional. Should the indices be returned with hard-zeroes included or removed from the
+#' random effect vector? Depends on where this function is being called.
 #'
 #' @return A list of class ccindex containing vectors of indices for the linear and smooth terms.
 #'
 #' @export
 #'
-get_indices <- function(model_data) {
+get_indices <- function(model_data,removezeros = TRUE) {
+  if (is.null(model_data$vectorofcolumnstoremove)) {
+    removezeros <- FALSE
+  } else if (length(model_data$vectorofcolumnstoremove) == 0) {
+    removezeros <- FALSE
+  } else if (all(model_data$vectorofcolumnstoremove == 0)) {
+    removezeros <- FALSE
+  }
   model_elements <- model_data$model_elements
   out <- structure(list(), class = "ccindex")
   if (model_data$M == 0) {
@@ -122,7 +131,12 @@ get_indices <- function(model_data) {
     out$smooth <- c()
   } else if (model_data$p == 0) {
     # No linear terms
-    out$smooth <- (model_data$Nd+1):(model_data$Nd+model_data$M)
+    if (removezeros) {
+      numsmooth <- model_data$M
+    } else {
+      numsmooth <- model_data$M + length(model_data$vectorofcolumnstoremove)
+    }
+    out$smooth <- (model_data$Nd+1):(model_data$Nd+numsmooth)
     covvalues <- model_data$A %>%
       purrr::map("u") %>%
       purrr::map(unique) %>%
@@ -131,14 +145,16 @@ get_indices <- function(model_data) {
       purrr::map(length)
     numtermsvec <- purrr::reduce(numterms,c)
     names(numtermsvec) <- names(numterms)
-    if (!is.null(model_data$vectorofcolumnstoremove)) {
-      if (all(model_data$vectorofcolumnstoremove == 0)) {
-        # Do nothing
-      } else {
-        for (vr in names(model_data$vectorofcolumnstoremove)) {
-          numtermsvec[vr] <- numtermsvec[vr] - 1
-          toremove <- which(covvalues[[vr]] == model_data$control$linear_constraints[[vr]]$whichzero[1])
-          covvalues[[vr]] <- covvalues[[vr]][-toremove]
+    if (removezeros) {
+      if (!is.null(model_data$vectorofcolumnstoremove)) {
+        if (all(model_data$vectorofcolumnstoremove == 0)) {
+          # Do nothing
+        } else {
+          for (vr in names(model_data$vectorofcolumnstoremove)) {
+            numtermsvec[vr] <- numtermsvec[vr] - 1
+            toremove <- which(covvalues[[vr]] == model_data$control$linear_constraints[[vr]]$whichzero[1])
+            covvalues[[vr]] <- covvalues[[vr]][-toremove]
+          }
         }
       }
     }
@@ -148,7 +164,12 @@ get_indices <- function(model_data) {
     out$covvalues <- covvalues
   } else {
     # Both linear and smooth terms
-    out$smooth <- (model_data$Nd+1):(model_data$Nd+model_data$M)
+    if (removezeros) {
+      numsmooth <- model_data$M
+    } else {
+      numsmooth <- model_data$M + length(model_data$vectorofcolumnstoremove)
+    }
+    out$smooth <- (model_data$Nd+1):(model_data$Nd+numsmooth)
     covvalues <- model_data$A %>%
       purrr::map("u") %>%
       purrr::map(unique) %>%
@@ -157,20 +178,22 @@ get_indices <- function(model_data) {
       purrr::map(length)
     numtermsvec <- purrr::reduce(numterms,c)
     names(numtermsvec) <- names(numterms)
-    if (!is.null(model_data$vectorofcolumnstoremove)) {
-      if (all(model_data$vectorofcolumnstoremove == 0)) {
-        # Do nothing
-      } else {
-        for (vr in names(model_data$vectorofcolumnstoremove)) {
-          numtermsvec[vr] <- numtermsvec[vr] - 1
-          toremove <- which(covvalues[[vr]] == model_data$control$linear_constraints[[vr]]$whichzero[1])
-          covvalues[[vr]] <- covvalues[[vr]][-toremove]
+    if (removezeros) {
+      if (!is.null(model_data$vectorofcolumnstoremove)) {
+        if (all(model_data$vectorofcolumnstoremove == 0)) {
+          # Do nothing
+        } else {
+          for (vr in names(model_data$vectorofcolumnstoremove)) {
+            numtermsvec[vr] <- numtermsvec[vr] - 1
+            toremove <- which(covvalues[[vr]] == model_data$control$linear_constraints[[vr]]$whichzero[1])
+            covvalues[[vr]] <- covvalues[[vr]][-toremove]
+          }
         }
       }
     }
 
     names(out$smooth) <- rep(names(numtermsvec),numtermsvec)
-    out$linear <- (model_data$Nd+model_data$M+1):(model_data$Nd+model_data$M+model_data$p)
+    out$linear <- (model_data$Nd+numsmooth+1):(model_data$Nd + numsmooth +model_data$p)
     degrees <- get_polynomial_degree(model_elements$linear_formula)
     names(out$linear) <- rep(names(degrees),degrees)
     out$covvalues <- covvalues
@@ -212,52 +235,62 @@ make_model_lincombs <- function(model_data) {
   polydegrees <- get_polynomial_degree(model_data$model_elements$linear_formula)
 
   # Get the indices for all terms
-  indices <- get_indices(model_data)
+  indices <- get_indices(model_data,removezeros = TRUE)
+  indices_zeroes <- get_indices(model_data,removezeros = FALSE)
+  # Wd <- model_data$Nd + length(indices$smooth) + length(indices$linear)
+  Wd <- model_data$Wd
   smooth_terms <- unique(names(indices$smooth))
   linear_terms <- unique(names(indices$linear))
   # The terms we use are the terms that appear both in smooth and linear
   terms_to_use <- intersect(smooth_terms,linear_terms)
 
-
-  # Helper to create a single linear combination
-  create_single_lincomb <- function(u,idx,degree) {
-    # u: value of the covariate
-    # idx: index of random effect U to which u corresponds
-    # degree: the degree of polynomial used in the model.
-    betavec <- u^(1:degree)
-
-    ll <- sparseVector(x = c(1,betavec),
-                       i = c(idx,(model_data$Nd + model_data$M + 1):(model_data$Wd)),
-                       length = model_data$Wd
-    )
-
-    as(ll,"sparseMatrix")
-  }
-
   # Create the linear combinations
   lincomblist <- list()
+  outmatlist <- list()
   for (nm in terms_to_use) {
     degree <- polydegrees[names(polydegrees) == nm]
     idx <- indices$smooth[names(indices$smooth) == nm]
     linear_idx <- indices$linear[names(indices$linear) == nm]
     u <- indices$covvalues[[nm]]
+
     for (j in 1:length(u)) {
       betavec <- u[j]^(1:degree)
       ll <- sparseVector(
         x = c(1,betavec),
         i = c(idx[j],linear_idx),
-        length = model_data$Wd
+        length = Wd
       )
       lincomblist <- c(lincomblist,ll)
     }
+    outmat <- lincomblist %>%
+      purrr::map(~as(.,"sparseMatrix")) %>%
+      purrr::reduce(cbind)
+
+    # Correct for removed zeros
+    if (!is.null(model_data$vectorofcolumnstoremove)) {
+      if (length(model_data$vectorofcolumnstoremove) > 0 & !all(model_data$vectorofcolumnstoremove == 0)) {
+        constr <- model_data$control$linear_constraints[[nm]]
+        wcol <- which(constr$u == constr$whichzero[1])
+        nr <- nrow(outmat)
+        bindvec <- as(sparseVector(x = constr$u[wcol]^(1:degree),i = linear_idx,length = Wd),"sparseMatrix")
+        if (wcol == 1) {
+          outmat <- cbind(bindvec,outmat)
+        } else if (wcol == ncol(outmat) + 1) {
+          outmat <- cbind(outmat,bindvec)
+        } else {
+          outmat <- cbind(outmat[ ,1:(wcol-1)],bindvec,outmat[ ,wcol:ncol(outmat)])
+        }
+      }
+    }
+
+    outmatlist <- c(outmatlist,outmat)
+    lincomblist <- list()
   }
 
   # Note: the following is not the fastest way to do this. See stackoverflow:
   # https://stackoverflow.com/questions/8843700/creating-sparse-matrix-from-a-list-of-sparse-vectors#8844057
   # It's about 2x - 3x faster in benchmarking; not worth introducing new code.
-  lincomblist %>%
-    purrr::map(~as(.,"sparseMatrix")) %>%
-    purrr::reduce(cbind)
+  outmatlist %>% purrr::reduce(cbind)
 }
 
 
@@ -548,7 +581,8 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
 
   list(mean = finalmeans,
        variance = finalvars,
-       lincombvars = finallincombvars)
+       lincombvars = finallincombvars,
+       lincombmatrix = lincomb)
 }
 
 

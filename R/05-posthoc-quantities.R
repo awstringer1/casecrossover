@@ -585,4 +585,104 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
        lincombmatrix = lincomb)
 }
 
+#' Marginal hyperparameter posterior
+#'
+#' @description Get the marginal density of a single coordinate of the hyperparameter vector theta using
+#' quadrature.
+#'
+#' @param j Integer index indicating which marginal to evaluate. If theta is K-dimensional then this should be from 1 to K.
+#' @param ccfit Object of class ccfit returned by casecrossover()
+#' @param quantiles Vector of numbers between 0 and 1 representing quantiles of the marginal posterior that are to be estimated
+#'
+#' @return A list containing elements
+#'         - margpost: dataframe of logged theta_j posterior values, evaluated on a grid of the same accuracy as those used
+#' to construct the full joint.
+#'         - quantiles: dataframe containing the quantiles of the marginal posterior. Easier to do these here since they
+#'         require a grid.
+#'
+#' @export
+#'
+marginal_hyperparameter_posterior <- function(j,ccfit,quantiles = c(2.5,97.5)/100) {
+  thetagridfull <- attr(ccfit$optimization,"thetagrid")
+  S <- thetagridfull$dim
+  # If it's already one-dimensional, don't need to do anything new, but do compute quantiles
+  if (S == 1) {
+    outmat <- dplyr::tibble(
+      theta = purrr::reduce(ccfit$optimization$theta,rbind),
+      thetalogmargpost = ccfit$optimization$theta_logposterior,
+      sigma = purrr::reduce(ccfit$optimization$sigma,rbind),
+      sigmalogmargpost = ccfit$optimization$sigma_logposterior
+    )
+
+    thetacumsum <- cumsum(mvQuad::getWeights(thetagridfull) * exp(outmat$thetalogmargpost))
+    thetaquantiles <- purrr::map(quantiles,~outmat$theta[which(thetacumsum == min(thetacumsum[thetacumsum > .x]))]) %>% purrr::reduce(c)
+    sigmaquantiles <- rev(exp(-.5 * thetaquantiles))
+
+    return(
+      list(
+        margpost = outmat,
+        quantiles = dplyr::tibble(whichmarginal = rep(1,length(quantiles)),q = quantiles,theta = thetaquantiles,sigma = sigmaquantiles)
+      )
+    )
+  }
+  # Get the reduced grid
+  thetagridreduced <- mvQuad::createNIGrid(
+    dim = thetagridfull$dim - 1,
+    type = thetagridfull$type[-j],
+    level = as.numeric(thetagridfull$level[ ,-j]),
+    ndConstruction = thetagridfull$ndConstruction,
+    level.trans = thetagridfull$level.trans
+  )
+  mvQuad::rescale(thetagridreduced,domain = thetagridfull$features$domain[-j, ])
+
+  # Get a 1-d grid, for computing quantiles at the end.
+  thetagrid1d <- mvQuad::createNIGrid(
+    dim = 1,
+    type = thetagridfull$type[j],
+    level = as.numeric(thetagridfull$level[ ,j]),
+    ndConstruction = thetagridfull$ndConstruction,
+    level.trans = thetagridfull$level.trans
+  )
+  mvQuad::rescale(thetagrid1d,domain = thetagridfull$features$domain[j, ])
+
+  # Return the marginal posterior and its evaluation points
+  # In the optimization results, we have a matrix of theta values which matches the full grid,
+  # and the log posterior evaluated at these values.
+  nodesfull <- purrr::reduce(ccfit$optimization$theta,rbind)
+  nodesfull <- cbind(nodesfull,ccfit$optimization$theta_logposterior) # Theta logposterior is now the last column
+  nodesfull <- nodesfull[order(nodesfull[ ,j]), ]
+  colnames(nodesfull) <- c(paste0("theta",1:S),"thetalogpost")
+  nodesfull <- as.data.frame(nodesfull)
+
+  # Now we have a matrix of thetavalues, nodes, and function values-- add on the weights
+  nodesmulti <- mvQuad::getNodes(thetagridreduced)
+  nodesmulti <- cbind(nodesmulti,mvQuad::getWeights(thetagridreduced))
+  colnames(nodesmulti) <- c(paste0("theta",(1:S)[-j]),"weights")
+  nodesmulti <- as.data.frame(nodesmulti)
+
+  suppressMessages({# It prints what it's joining by, which is all columns, and I don't want to see this printed
+    thetamargposts <- dplyr::left_join(nodesfull,nodesmulti) %>%
+      dplyr::group_by(.data[[stringr::str_c("theta",j)]]) %>%
+      dplyr::summarize(thetalogmargpost = matrixStats::logSumExp(.data[["thetalogpost"]] + log(.data[["weights"]])))
+  })
+
+  thetamargposts$whichmarginal <- rep(j,nrow(thetamargposts))
+  # Now add on the sigmas
+  outmat <- thetamargposts %>%
+    dplyr::mutate(sigma = exp(-.5 * .data[[paste0("theta",j)]]),
+                  sigmalogmargpost = log(2/.data[["sigma"]]) + .data[["thetalogmargpost"]]
+    ) %>%
+      dplyr::rename(theta = .data[[paste0("theta",j)]])
+
+  # Quantiles
+  thetacumsum <- cumsum(mvQuad::getWeights(thetagrid1d) * exp(outmat$thetalogmargpost))
+  thetaquantiles <- purrr::map(quantiles,~outmat$theta[which(thetacumsum == min(thetacumsum[thetacumsum > .x]))]) %>% purrr::reduce(c)
+  sigmaquantiles <- rev(exp(-.5 * thetaquantiles))
+
+  list(
+    margpost = outmat,
+    quantiles = dplyr::tibble(whichmarginal = rep(j,length(quantiles)),q = quantiles,theta = thetaquantiles,sigma = sigmaquantiles)
+  )
+}
+
 

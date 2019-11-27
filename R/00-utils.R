@@ -223,7 +223,11 @@ stitch_zero_vector <- function(x,z) {
   as.numeric(y)
 }
 
+# INTERNAL: compute quantiles given a vector of grid points and logged density evaluations
+compute_quantiles <- function(tt,pp,origgrid) {
+  pp <- exp(pp)
 
+}
 
 
 

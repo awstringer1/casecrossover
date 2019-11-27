@@ -52,7 +52,7 @@ log-smoothing precision of this RW2, with parameters $u = 3$ and $\alpha = .75$.
 
 In order to do all of this, we need only the following code:
 
-```{r fit-cc-1,cache = TRUE,eval = FALSE}
+```{r fit-cc-1,cache = TRUE}
 # Specify the control parameters
 # See ?cc_control for information.
 smoothcontrol <- cc_control(
@@ -86,7 +86,7 @@ This works in the following way:
 
 We can inspect the resulting `cc_fit` object:
 
-```{r summary-cc-1,eval = FALSE}
+```{r summary-cc-1}
 names(simcc)
 simcc$posthoc
 simcc$optimization
@@ -95,7 +95,7 @@ names(simcc$modeldata)
 
 You can use the more user-friendly S3 methods though:
 
-```{r summary-cc-2,eval = FALSE}
+```{r summary-cc-2}
 summary(simcc)
 
 pltcc <- plot(simcc)
@@ -105,19 +105,53 @@ pltcc$hyperparameters$theta
 pltcc$hyperparameters$sigma
 ```
 
-The following key elements still need to be implemented:
+The interface can handle multiple smooth covariates in the obvious way, by including multiple `s()` terms in the formula. Marginal posterior
+summaries for each smoothing parameter are returned.
 
-\begin{enumerate}
-\item The method right now can handle multiple smooth terms (and hence multidimensional $\theta$), but
-I still need to implement summary quantities based on the marginal distributions $\theta_{j}$, which
-requires some quadrature stuff I haven't worked out yet. So if you use multiple smooth terms it will work and
-the covariate effect plots will be available for each term, but the hyperparameter summaries aren't yet.
-\item Further testing of models with both linear and smooth terms. Currently the simulation here breaks with
-a formula of `case ~ exposure_binned + s(exposure_binned)`, and I'm not sure why yet.
-\item Outputting proper covariate effect plots for models with both linear and smooth terms; currently only plots
-of linear and smooth terms separately are computed, but if you have the same covariate as linear and smooth, you
-want a plot of the linear combination. I have the marginal variances computed correctly, so I just need to compute
-the marginal means and make the plot.
-\end{enumerate}
+The interface can also handle models in which you include the same covariate as a polynomial, and smooth term. In this case,
+the correct marginal means and variances of the linear combinations that form each covariate effect are computed. Try the following (not run):
+
+```{r cc-5,eval = FALSE}
+# Add more constraints. Pick the values from the unique values of sim1data$exposure_binned
+smoothcontrol2 <- cc_control(
+  smooth_prior = list(pc_prior(3,.75)),
+  linear_constraints = create_linear_constraints(u = sim1data$exposure_binned,
+                                                 whichzero = c(0.5,0.52041),
+                                                 nm = "exposure_binned"),
+  thetaaccuracy = 50,
+  sparsetheta = FALSE, 
+  thetarange = c(-10,10)) 
+
+simcc2 <- casecrossover::casecrossover(
+  case ~ exposure_binned + s(exposure_binned) + strata(subject),
+  data = sim1data,
+  control = smoothcontrol,
+  verbose = TRUE
+)
+
+summary(simcc2)
+plot(simcc2)
+
+# Or use a polynomial. Note that orthogonal polynomials are NOT supported at this time, raw
+# are used regardless of which you specify in poly().
+smoothcontrol3 <- cc_control(
+  smooth_prior = list(pc_prior(3,.75)),
+  linear_constraints = create_linear_constraints(u = sim1data$exposure_binned,
+                                                 whichzero = c(0.47959,0.5,0.52041),
+                                                 nm = "exposure_binned"),
+  thetaaccuracy = 50,
+  sparsetheta = FALSE, 
+  thetarange = c(-10,10)) 
+
+simcc3 <- casecrossover::casecrossover(
+  case ~ poly(exposure_binned,2) + s(exposure_binned) + strata(subject),
+  data = sim1data,
+  control = smoothcontrol,
+  verbose = TRUE
+)
+
+summary(simcc3)
+plot(simcc3)
 
 
+```

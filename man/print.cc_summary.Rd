@@ -4,10 +4,10 @@
 \alias{print.cc_summary}
 \title{Print method for summary.cc_fit.}
 \usage{
-print.cc_summary(ccsummary)
+print.cc_summary(x)
 }
 \arguments{
-\item{ccsummary}{An object of class cc_summary, output by summary().}
+\item{x}{An object of class cc_summary, output by applying summary() to an object of class cc_fit returned by casecrossover().}
 }
 \value{
 Nothing.

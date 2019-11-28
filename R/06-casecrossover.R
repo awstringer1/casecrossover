@@ -220,31 +220,31 @@ summary.cc_fit <- function(object,...) {
 #' @description Generic print method for a cc_fit summary object. Not exported, user will call this function
 #' by simply typing summary(...) in the console, like normal.
 #'
-#' @param ccsummary An object of class cc_summary, output by summary().
+#' @param x An object of class cc_summary, output by applying summary() to an object of class cc_fit returned by casecrossover().
 #'
 #' @return Nothing.
 #'
-print.cc_summary <- function(ccsummary) {
+print.cc_summary <- function(x) {
   cat("Call:\n")
-  print(ccsummary$call)
+  print(x$call)
 
-  if ("linear" %in% names(ccsummary$idx)) {
+  if ("linear" %in% names(x$idx)) {
     cat("\n\nFixed effects:\n")
-    print(ccsummary$summarytablefixed)
+    print(x$summarytablefixed)
   }
-  if ("smooth" %in% names(ccsummary$idx)) {
+  if ("smooth" %in% names(x$idx)) {
     cat("\n\nRandom effects:\n")
-    print(ccsummary$summarytablerandom)
+    print(x$summarytablerandom)
     cat("\n\nHyperparameter(s):\n")
-    print(ccsummary$summarytablehyper)
+    print(x$summarytablehyper)
   }
 
-  if (!is.null(ccsummary$summarytablelincomb)) {
-    if (nrow(ccsummary$summarytablelincomb) > 10) {
+  if (!is.null(x$summarytablelincomb)) {
+    if (nrow(x$summarytablelincomb) > 10) {
       cat("\n\nSuppressing printing of linear combinations due to size. Access them with summary(...)$summarytablelincomb.\n")
     } else {
       cat("\n\nLinear combinations:\n")
-      print(ccsummary$summarytablelincomb)
+      print(x$summarytablelincomb)
     }
   }
 }

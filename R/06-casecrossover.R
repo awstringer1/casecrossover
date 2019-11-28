@@ -216,6 +216,7 @@ summary.cc_fit <- function(object,...) {
 
 #' Print method for summary.cc_fit.
 #'
+#' @method print cc_summary
 #'
 #' @description Generic print method for a cc_fit summary object. Not exported, user will call this function
 #' by simply typing summary(...) in the console, like normal.

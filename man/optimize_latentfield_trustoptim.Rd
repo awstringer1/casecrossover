@@ -5,11 +5,21 @@
 \alias{optimize_all_thetas_parallel}
 \title{Optimize the conditional posterior of the latent Gaussian variables for one hyperparameter configuration}
 \usage{
-optimize_latentfield_trustoptim(theta, model_data,
-  hessian_structure = NULL, Q = NULL, optcontrol = NULL)
+optimize_latentfield_trustoptim(
+  theta,
+  model_data,
+  hessian_structure = NULL,
+  Q = NULL,
+  optcontrol = NULL
+)
 
-optimize_all_thetas_parallel(thetagrid, model_data,
-  hessian_structure = NULL, optcontrol = NULL, doparallel = TRUE)
+optimize_all_thetas_parallel(
+  thetagrid,
+  model_data,
+  hessian_structure = NULL,
+  optcontrol = NULL,
+  doparallel = TRUE
+)
 }
 \arguments{
 \item{theta}{Vector, representing one configuration of hyperparameters (optimize_latentfield_trustoptim). List of vectors, each

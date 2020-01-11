@@ -4,11 +4,9 @@ Title: Approximate Bayesian Inference for Case Crossover Models
 Version: 0.1.0
 Authors@R: person("Alex","Stringer",email = "alex.stringer@mail.utoronto.ca",role = c("cre","aut"))
 Maintainer: Alex Stringer <alex.stringer@mail.utoronto.ca>
-Description: Implementation of the methodology described in ...
+Description: Implementation of the methodology described in "Approximate Bayesian Inference for Case Crossover Models", under review (2019).
     This package fits case crossover models with linear or smooth terms
-    for covariate effects, using approximate Bayesian inference. Marginal
-    posterior summaries are returned by default, and functions are provided
-    for more advanced computations like global confidence envelopes and samples.
+    for covariate effects, using approximate Bayesian inference.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -29,7 +27,7 @@ Imports:
   trustOptim,
   data.table,
   mvQuad
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.1
 Suggests: 
     knitr,
     rmarkdown,

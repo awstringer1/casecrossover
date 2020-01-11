@@ -13,8 +13,13 @@ log_posterior_W(W, theta, model_data, Q = NULL)
 
 grad_log_posterior_W(W, theta, model_data, Q = NULL)
 
-hessian_log_posterior_W(W, theta = NULL, Q = NULL, model_data,
-  structure = NULL)
+hessian_log_posterior_W(
+  W,
+  theta = NULL,
+  Q = NULL,
+  model_data,
+  structure = NULL
+)
 }
 \arguments{
 \item{W}{Value of W = (delta,gamma,beta) to calculate the prior/posterior at. The order is as

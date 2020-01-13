@@ -23,6 +23,7 @@ external.packages:
     parallel
     data.table
     mvQuad
+    Matrix
 local.repos: 
 load.external.packages.on.startup: TRUE
 ignored.packages: 

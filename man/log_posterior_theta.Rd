@@ -5,11 +5,9 @@
 \alias{log_posterior_sigma}
 \title{Log-posterior approximation for theta and sigma}
 \usage{
-log_posterior_theta(theta, W, model_data, hessian_structure = NULL,
-  Q = NULL)
+log_posterior_theta(theta, W, model_data, hessian_structure = NULL, Q = NULL)
 
-log_posterior_sigma(sigma, W, model_data, hessian_structure = NULL,
-  Q = NULL)
+log_posterior_sigma(sigma, W, model_data, hessian_structure = NULL, Q = NULL)
 }
 \arguments{
 \item{theta}{Vector of log-precisions at which to evaluate the log-posterior. theta = -2*log(sigma).}

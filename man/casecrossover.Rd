@@ -4,8 +4,7 @@
 \alias{casecrossover}
 \title{Fit a case crossover model with linear and non-parametric terms.}
 \usage{
-casecrossover(formula, data, control = cc_default_control(),
-  verbose = FALSE)
+casecrossover(formula, data, control = cc_default_control(), verbose = FALSE)
 }
 \arguments{
 \item{formula}{An R formula, which can contain s() terms and must contain a strata() term.}

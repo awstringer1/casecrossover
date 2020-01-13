@@ -526,5 +526,9 @@ model_setup <- function(formula,data,control = cc_control(),verbose = FALSE) {
   model_data$control <- control
   model_data$model_elements <- model_elements
 
+  # Add the structure of the hessian
+  model_data$hessian_structure <- hessian_log_likelihood_structure(W = rep(0,model_data$Wd),model_data = model_data)
+
+
   model_data
 }

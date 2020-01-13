@@ -18,7 +18,7 @@
 add_log_posterior_values <- function(optresults,model_data) {
   optresults <- dplyr::ungroup(optresults)
   if (is.null(model_data$hessian_structure)) {
-    hessian_structure <- hessian_log_likelihood_structure(rep(0,model_data$Wd),model_data)
+    # hessian_structure <- hessian_log_likelihood_structure(rep(0,model_data$Wd),model_data)
   } else {
     hessian_structure <- model_data$hessian_structure
   }
@@ -448,7 +448,7 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
 
   # Compute the hessians for each theta
   if (is.null(model_data$hessian_structure)) {
-    hessian_structure <- hessian_log_likelihood_structure(W = model_results$solution[[1]],model_data = model_data)
+    # hessian_structure <- hessian_log_likelihood_structure(W = model_results$solution[[1]],model_data = model_data)
   } else {
     hessian_structure <- model_data$hessian_structure
   }

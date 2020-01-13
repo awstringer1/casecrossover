@@ -52,7 +52,11 @@ optimize_latentfield_trustoptim <- function(theta,model_data,hessian_structure =
   }
   # Get the hessian structure, if not provided
   if (is.null(hessian_structure)) {
-    hessian_structure <- hessian_log_likelihood_structure(startingvals,model_data)
+    if (is.null(model_data$hessian_structure)) {
+      # hessian_structure <- hessian_log_likelihood_structure(startingvals,model_data)
+    } else {
+      hessian_structure <- model_data$hessian_structure
+    }
   }
 
   optfunchess <- function(W) -1 * hessian_log_posterior_W(W,Q = Q,model_data = model_data,structure = hessian_structure)

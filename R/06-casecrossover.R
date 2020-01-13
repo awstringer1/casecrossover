@@ -88,7 +88,7 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
     cat("Performing optimization, time: ",format(tm),"...\n")
   }
   # Compute hessian structure
-  model_data$hessian_structure <- hessian_log_likelihood_structure(rep(0,model_data$Wd),model_data)
+  # model_data$hessian_structure <- hessian_log_likelihood_structure(rep(0,model_data$Wd),model_data)
   opt <- optimize_all_thetas_parallel(thetagrid,
                                       model_data,
                                       hessian_structure = model_data$hessian_structure,
@@ -102,7 +102,14 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
     cat("Computing post-hoc quantities, time: ",format(tm),"...\n")
   }
   # Add log posterior values before computing means/variances, so they can be returned.
-  optwithlogpost <- add_log_posterior_values(opt,model_data) %>% normalize_optresults_logpost()
+  if (K == 0) {
+    optwithlogpost <- opt
+    optwithlogpost$sigma <- exp(-.5 * unlist(opt$theta))
+    optwithlogpost$theta_logposterior <- 0
+    optwithlogpost$sigma_logposterior <- 0
+  } else {
+    optwithlogpost <- add_log_posterior_values(opt,model_data) %>% normalize_optresults_logpost()
+  }
   posthoc <- compute_marginal_means_and_variances(optwithlogpost,model_data)
 
   # If we removed columns from the precision matrix, we added the appropriate zeroes back in inside

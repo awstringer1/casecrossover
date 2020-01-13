@@ -141,7 +141,7 @@ optimize_all_thetas_parallel <- function(thetagrid,model_data,hessian_structure 
   cat("Performing optimization, start time: ", format(Sys.time(),"%H:%M:%S"),"\n")
 
   tm <- proc.time()
-  if (doparallel) {
+  if (length(model_data$model_elements$smooth) > 0 & doparallel) {
     opt <- parallel::mclapply(theta,do_opt)
   } else {
     opt <- lapply(theta,do_opt)

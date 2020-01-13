@@ -87,8 +87,11 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
     tm <- Sys.time()
     cat("Performing optimization, time: ",format(tm),"...\n")
   }
+  # Compute hessian structure
+  model_data$hessian_structure <- hessian_log_likelihood_structure(rep(0,model_data$Wd),model_data)
   opt <- optimize_all_thetas_parallel(thetagrid,
                                       model_data,
+                                      hessian_structure = model_data$hessian_structure,
                                       optcontrol = model_data$control$opt_control,
                                       doparallel = model_data$control$doparallel)
 

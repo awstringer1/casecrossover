@@ -52,7 +52,11 @@ optimize_latentfield_trustoptim <- function(theta,model_data,hessian_structure =
   }
   # Get the hessian structure, if not provided
   if (is.null(hessian_structure)) {
-    hessian_structure <- hessian_log_likelihood_structure(startingvals,model_data)
+    if (is.null(model_data$hessian_structure)) {
+      # hessian_structure <- hessian_log_likelihood_structure(startingvals,model_data)
+    } else {
+      hessian_structure <- model_data$hessian_structure
+    }
   }
 
   optfunchess <- function(W) -1 * hessian_log_posterior_W(W,Q = Q,model_data = model_data,structure = hessian_structure)
@@ -137,7 +141,7 @@ optimize_all_thetas_parallel <- function(thetagrid,model_data,hessian_structure 
   cat("Performing optimization, start time: ", format(Sys.time(),"%H:%M:%S"),"\n")
 
   tm <- proc.time()
-  if (doparallel) {
+  if (length(model_data$model_elements$smooth) > 0 & doparallel) {
     opt <- parallel::mclapply(theta,do_opt)
   } else {
     opt <- lapply(theta,do_opt)

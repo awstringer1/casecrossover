@@ -10,15 +10,13 @@ Description: Implementation of the methodology described in "Approximate Bayesia
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Depends: R (>= 3.4.0)
+Depends: R (>= 3.5.0)
 Imports:
   ggplot2,
   magrittr,
   rlang,
   dplyr,
-  base,
   stats,
-  utils,
   Matrix,
   stringr,
   purrr,

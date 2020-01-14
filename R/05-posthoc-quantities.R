@@ -437,7 +437,7 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
 
   # Compute the precision matrices for each theta
   precision_matrices <- model_results %>%
-    purrr::pmap(~list(Q = Q_matrix(theta = ..1,model_data = model_data),
+    purrr::pmap(~list(Q = Q_matrix(theta = ..1,model_data = model_data,tau = model_data$control$tau),
                       theta = ..1)
     )
 

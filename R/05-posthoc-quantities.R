@@ -393,7 +393,7 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
         constrA <- make_linear_constraints(model_data)
       }
     }
-  } else if (if.logical(constrA)) {
+  } else if (is.logical(constrA)) {
     # If constrA is FALSE, nullify it now
     if (!constrA) constrA <- NULL
   } else {

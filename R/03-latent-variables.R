@@ -180,7 +180,7 @@ Q_matrix <- function(theta,model_data,tau = exp(12)) {
 logprior_W <- function(W,model_data,theta = NULL,Q = NULL) {
   if (is.null(Q)) {
     if (is.null(theta)) stop("If Q not provided, theta must be provided.")
-    Q <- Q_matrix(theta,model_data)
+    Q <- Q_matrix(theta,model_data,tau = model_data$control$tau)
   }
   # Check dimensions and throw an informative error
   if (!(all(length(W) == dim(Q)))) stop(stringr::str_c("Length of W is ",length(W)," but dimension of Q is ",dim(Q),". Check your model data."))
@@ -203,7 +203,7 @@ log_posterior_W <- function(W,theta,model_data,Q = NULL) {
 #'
 grad_log_posterior_W <- function(W,theta,model_data,Q = NULL) {
   if (is.null(Q)) {
-    Q <- Q_matrix(theta,model_data)
+    Q <- Q_matrix(theta,model_data,tau = model_data$control$tau)
   }
   -as.numeric(crossprod(Q,W)) + grad_log_likelihood(W,model_data)
 }
@@ -216,7 +216,7 @@ grad_log_posterior_W <- function(W,theta,model_data,Q = NULL) {
 #'
 hessian_log_posterior_W <- function(W,theta = NULL,Q = NULL,model_data,structure = NULL) {
   if (is.null(theta) & is.null(Q)) stop("One of Q or theta must be provided")
-  if (is.null(Q)) Q <- Q_matrix(theta,model_data)
+  if (is.null(Q)) Q <- Q_matrix(theta,model_data,tau = model_data$control$tau)
   -(Q + hessian_log_likelihood(W,model_data,structure))
 }
 
@@ -262,7 +262,7 @@ hessian_log_posterior_W <- function(W,theta = NULL,Q = NULL,model_data,structure
 log_posterior_theta <- function(theta,W,model_data,hessian_structure = NULL,Q = NULL) {
   # W is the mode of log_posterior_W(theta)
   if (is.null(Q)) {
-    Q <- Q_matrix(theta,model_data)
+    Q <- Q_matrix(theta,model_data,tau = model_data$control$tau)
   }
   if (is.null(hessian_structure)) {
     hessian_structure <- hessian_log_likelihood_structure(W,model_data)

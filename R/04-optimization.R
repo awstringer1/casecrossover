@@ -48,7 +48,7 @@ optimize_latentfield_trustoptim <- function(theta,model_data,hessian_structure =
 
   # Get the Q matrix if not provided
   if (is.null(Q)) {
-    Q <- Q_matrix(theta,model_data)
+    Q <- Q_matrix(theta,model_data,tau = model_data$control$tau)
   }
   # Get the hessian structure, if not provided
   if (is.null(hessian_structure)) {

@@ -3,7 +3,7 @@
 <!-- badges: end -->
 
 # casecrossover
-R package supporting case crossover models as described in ...
+R package supporting case crossover models as described in Approximate Bayesian Inference for Case Crossover Models (2019), under review.
 
 # Description
 

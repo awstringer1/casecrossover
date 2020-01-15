@@ -393,9 +393,9 @@ compute_marginal_means_and_variances <- function(model_results,model_data,i = NU
         constrA <- make_linear_constraints(model_data)
       }
     }
-  } else if (!constrA) {
+  } else if (if.logical(constrA)) {
     # If constrA is FALSE, nullify it now
-    constrA <- NULL
+    if (!constrA) constrA <- NULL
   } else {
     if (!inherits(constrA,"sparseMatrix")) {
       stop("constrA must either be NULL, logical, or an object inheriting from sparseMatrix")

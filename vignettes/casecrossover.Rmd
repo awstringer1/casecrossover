@@ -52,7 +52,7 @@ log-smoothing precision of this RW2, with parameters $u = 3$ and $\alpha = .75$.
 
 In order to do all of this, we need only the following code:
 
-```{r fit-cc-1,cache = TRUE,eval = FALSE}
+```{r fit-cc-1,eval = TRUE}
 # Specify the control parameters
 # See ?cc_control for information.
 smoothcontrol <- cc_control(
@@ -86,7 +86,7 @@ This works in the following way:
 
 We can inspect the resulting `cc_fit` object:
 
-```{r summary-cc-1,eval = FALSE}
+```{r summary-cc-1,eval = TRUE}
 names(simcc)
 simcc$posthoc
 simcc$optimization
@@ -95,7 +95,7 @@ names(simcc$modeldata)
 
 You can use the more user-friendly S3 methods though:
 
-```{r summary-cc-2,eval = FALSE}
+```{r summary-cc-2,eval = TRUE}
 summary(simcc)
 
 pltcc <- plot(simcc)

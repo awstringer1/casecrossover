@@ -103,6 +103,7 @@ cc_default_control <- function() {
     sparsetheta = FALSE,
     thetarange = c(-1,1),
     beta_prior_logprec = log(1/10),
+    tau = exp(12),
     opt_control = list(
       prec = 1e-08,
       stop.trust.radius = sqrt(.Machine$double.eps),

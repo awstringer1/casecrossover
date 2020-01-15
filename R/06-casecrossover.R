@@ -45,16 +45,27 @@
 
 casecrossover <- function(formula,data,control = cc_default_control(),verbose = FALSE) {
   # Set up the model
-  if (verbose) cat("Setting up model...\n")
+  if (verbose) {
+    tm <- Sys.time()
+    cat("Setting up model, time: ",format(tm),"...\n")
+  }
   model_data <- model_setup(formula,data,control)
 
   # Sort the data by id, case
-  if (verbose) cat("Sorting data...\n")
+  if (verbose) {
+    cat("Finished setting up model, took: ",format(Sys.time() - tm),"\n")
+    tm <- Sys.time()
+    cat("Sorting data, time: ",format(tm),"...\n")
+  }
   data <- data %>% dplyr::arrange(.data[[model_data$model_elements$strata]],.data[[model_data$model_elements$response]])
 
   # Choose the theta grid
   # TODO: add this to control
-  if (verbose) cat("Creating the grid for numerical integration of theta posterior...\n")
+  if (verbose) {
+    cat("Finished sorting data, took: ",format(Sys.time() - tm),"\n")
+    tm <- Sys.time()
+    cat("Creating the grid for numerical integration of theta posterior, time: ",format(tm),"...\n")
+  }
   K <- length(model_data$model_elements$smooth)
   if (K == 0) {
     # Create a blank grid as a placeholder
@@ -71,16 +82,34 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
   }
 
   # Optimization
-  if (verbose) cat("Performing optimization...\n")
+  if (verbose) {
+    cat("Finished creating theta grid, took: ",format(Sys.time() - tm),"\n")
+    tm <- Sys.time()
+    cat("Performing optimization, time: ",format(tm),"...\n")
+  }
+  # Compute hessian structure
+  # model_data$hessian_structure <- hessian_log_likelihood_structure(rep(0,model_data$Wd),model_data)
   opt <- optimize_all_thetas_parallel(thetagrid,
                                       model_data,
+                                      hessian_structure = model_data$hessian_structure,
                                       optcontrol = model_data$control$opt_control,
                                       doparallel = model_data$control$doparallel)
 
   # Post-hoc quantities
-  if (verbose) cat("Computing post-hoc quantities...\n")
+  if (verbose) {
+    cat("Finished optimization, took: ",format(Sys.time() - tm),"\n")
+    tm <- Sys.time()
+    cat("Computing post-hoc quantities, time: ",format(tm),"...\n")
+  }
   # Add log posterior values before computing means/variances, so they can be returned.
-  optwithlogpost <- add_log_posterior_values(opt,model_data) %>% normalize_optresults_logpost()
+  if (K == 0) {
+    optwithlogpost <- opt
+    optwithlogpost$sigma <- exp(-.5 * unlist(opt$theta))
+    optwithlogpost$theta_logposterior <- 0
+    optwithlogpost$sigma_logposterior <- 0
+  } else {
+    optwithlogpost <- add_log_posterior_values(opt,model_data) %>% normalize_optresults_logpost()
+  }
   posthoc <- compute_marginal_means_and_variances(optwithlogpost,model_data)
 
   # If we removed columns from the precision matrix, we added the appropriate zeroes back in inside
@@ -93,13 +122,20 @@ casecrossover <- function(formula,data,control = cc_default_control(),verbose = 
   # }
 
   # Build final output object, for plotting and printing etc.
-  if (verbose) cat("Building output object...\n")
+  if (verbose) {
+    cat("Finished post-hoc, took: ",format(Sys.time() - tm),"\n")
+    tm <- Sys.time()
+    cat("Building output object, time: ",format(tm),"...\n")
+  }
   out <- list(
     posthoc = posthoc,
     optimization = optwithlogpost,
     thetagrid = thetagrid,
     modeldata = model_data
   )
+  if (verbose) {
+    cat("Finished case crossover, time: ",format(Sys.time() - tm),"\n")
+  }
   structure(out,class = "cc_fit")
 }
 

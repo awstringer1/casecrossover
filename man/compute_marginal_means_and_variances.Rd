@@ -4,8 +4,13 @@
 \alias{compute_marginal_means_and_variances}
 \title{Compute marginal means and variances}
 \usage{
-compute_marginal_means_and_variances(model_results, model_data, i = NULL,
-  constrA = NULL, lincomb = NULL)
+compute_marginal_means_and_variances(
+  model_results,
+  model_data,
+  i = NULL,
+  constrA = NULL,
+  lincomb = NULL
+)
 }
 \arguments{
 \item{model_results}{Output of optimization; can be before or after you call add_log_posterior_values().}

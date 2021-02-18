@@ -5,7 +5,7 @@
 # casecrossover
 R package supporting case crossover models as described in Approximate Bayesian Inference for Case Crossover Models (2020), accepted to Biometrics.
 
-This package is no longer under development. I am focussing on new methods and software, notably the `aghq` package and methods ([github](https://github.com/awstringer1/aghq),[vignette](https://arxiv.org/abs/2101.04468),[methods/theory preprint](https://arxiv.org/abs/2102.06801)). Expect a `casecrossover2` package which uses this underlying framework to appear in the future!
+This package is no longer under development. I am focussing on new methods and software, notably the `aghq` package and methods ([github](https://github.com/awstringer1/aghq), [vignette](https://arxiv.org/abs/2101.04468), [methods/theory preprint](https://arxiv.org/abs/2102.06801)). Expect a `casecrossover2` package which uses this underlying framework to appear in the future!
 
 # Description
 
